@@ -15,392 +15,400 @@
  *	http://javascript.nwbox.com/NWEvents/nwevents.js
  */
 
-window.NW||(window.NW={});
+window.NW || (window.NW = {});
 
-NW.Event=function(){
+NW.Event = function() {
 
-	var version='1.09',
-		release='20080624',
+	var version = '1.09',
+		release = '20080624',
 
-	H={},
-	D={},
-	L={},
+	Handlers = {},
+	Delegates = {},
+	Listeners = {},
 
-	E={
-		'A':/^[\.\-\#\w]+$/,
-		'T':/^([^#\.]+)/,
-		'I':/#([^\.]+)/,
-		'C':/\.([^#]+)/
+	Patterns = {
+		'all' : /^[\.\-\#\w]+$/,
+		'tagName': /^([^#\.]+)/,
+		'id': /#([^\.]+)/,
+		'className': /\.([^#]+)/
 	},
 
-	forcedPropagation=false,
+	forcedPropagation = false,
 
-	CAPTURING_PHASE=1,AT_TARGET=2,BUBBLING_PHASE=3,
+	CAPTURING_PHASE = 1,
+	AT_TARGET = 2,
+	BUBBLING_PHASE = 3,
 
-	fixEvent=
-		function(o,e,c){
-			e||(e=getContext(o).event);
-			e.currentTarget=o;
-			e.target=e.srcElement||o;
-			e.preventDefault=preventDefault;
-			e.stopPropagation=stopPropagation;
-			e.eventPhase=
-				c&&(e.target==o)?CAPTURING_PHASE:
-					(e.target==o?AT_TARGET:BUBBLING_PHASE);
-			e.relatedTarget=
-				e[(e.target==e.fromElement?'to':'from')+'Element'];
-			e.timeStamp=+new Date();
-			return e;
+	fixEvent =
+		function(object, event, capture) {
+			event || (event = getContext(object).event);
+			event.currentTarget = object;
+			event.target = event.srcElement || object;
+			event.preventDefault = preventDefault;
+			event.stopPropagation = stopPropagation;
+			event.eventPhase =
+				capture && (event.target == object) ?
+					CAPTURING_PHASE :
+					(event.target == object ?
+						AT_TARGET :
+						BUBBLING_PHASE);
+			event.relatedTarget =
+				event[(event.target == event.fromElement ? 'to' : 'from') + 'Element'];
+			event.timeStamp=+new Date();
+			return event;
 		},
 
-	preventDefault=
-		function(){
-			this.returnValue=false;
-		},
-	
-	stopPropagation=
-		function(){
-			this.cancelBubble=true;
+	preventDefault =
+		function() {
+			this.returnValue = false;
 		},
 
-	getContext=
-		function(o){
-			return (o.ownerDocument||o.document||o).parentWindow||window;
+	stopPropagation =
+		function() {
+			this.cancelBubble = true;
 		},
 
-	isRegistered=
-		function(a,o,t,h,c){
-			var i,l,f=false;
-			if(a&&a.o){
-				for(i=0,l=a.o.length;l>i;i++){
-					if(a.o[i]===o&&
-						a.f[i]===h&&
-						a.p[i]===c){
-						f=i;
+	getContext =
+		function(object) {
+			return (object.ownerDocument || object.document || object).parentWindow || window;
+		},
+
+	isRegistered =
+		function(array, object, type, handler, capture) {
+			var i, l, found = false;
+			if (array && array.objects) {
+				for(i = 0, l = array.objects.length; l > i; i++) {
+					if (array.objects[i] === object &&
+						array.funcs[i] === handler &&
+						array.parms[i] === capture) {
+						found = i;
 						break;
 					}
 				}
 			}
-			return f;
+			return found;
 		},
 
-	handleListeners=
-		function(e){
-			var i,l,h,
-				o,f,p,
-				r=true,
-				t=e.type;
-			if(forcedPropagation){
-				if(/focus|blur|change|reset|submit/i.test(e.type)&&!e.propagated){
-					if(e.preventDefault){
-						e.preventDefault();
-					}else{
-						e.returnValue=false;
+	handleListeners =
+		function(event) {
+			var i, l, objects, funcs, parms,
+				result = true, type = event.type;
+			if (forcedPropagation) {
+				if (/focus|blur|change|reset|submit/i.test(event.type) && !event.propagated) {
+					if (event.preventDefault) {
+						event.preventDefault();
+					} else {
+						event.returnValue = false;
 					}
 					return false;
 				}
 			}
-			if(L[t]&&L[t].o){
-				o=L[t].o.slice();
-				f=L[t].f.slice();
-				p=L[t].p.slice();
-				for(i=0,l=o.length;l>i;i++){
-					if(o[i]===this
-						&&(
-							(e.eventPhase==BUBBLING_PHASE&&p[i]==false)||
-							(e.eventPhase==CAPTURING_PHASE&&p[i]==true)||
-							!e.propagated
+			if (Listeners[type] && Listeners[type].objects) {
+				objects = Listeners[type].objects.slice();
+				funcs = Listeners[type].funcs.slice();
+				parms = Listeners[type].parms.slice();
+				for(i = 0, l = objects.length; l > i; i++) {
+					if (objects[i] === this
+						&& (
+							(event.eventPhase == BUBBLING_PHASE && parms[i] === false) ||
+							(event.eventPhase == CAPTURING_PHASE && parms[i] === true) ||
+							!event.propagated
 						)
-					){
-						if(e.propagated&&e.target===this){
-							e.eventPhase=AT_TARGET;
+					) {
+						if (event.propagated && event.target === this) {
+							event.eventPhase = AT_TARGET;
 						}
-						if(f[i].call(this,e)===false){
-							r=false;
+						if (funcs[i].call(this, event) === false) {
+							result = false;
 							break;
 						}
 					}
 				}
 			}
-			return r;
+			return result;
 		},
 
-	handleDelegates=
-		function(e){
-			var i,l,
-				o,f,p,
-				r=true,
-				t=e.type;
-			if(D[t]&&D[t].o){
-				o=D[t].o.slice();
-				f=D[t].f.slice();
-				p=D[t].p.slice();
-				for(i=0,l=o.length;l>i;i++){
-					if(match(e.target,o[i])&&p[i]===this){
-						if(f[i].call(e.target,e)===false){
-							r=false;
+	handleDelegates =
+		function(event) {
+			var i, l, objects, funcs, parms,
+				result = true, type = event.type;
+			if (Delegates[type] && Delegates[type].objects) {
+				objects = Delegates[type].objects.slice();
+				funcs = Delegates[type].funcs.slice();
+				parms = Delegates[type].parms.slice();
+				for(i = 0, l = objects.length; l > i; i++) {
+					if (match(event.target, objects[i]) && parms[i] === this) {
+						if (funcs[i].call(event.target, event) === false) {
+							result = false;
 							break;
 						}
 					}
 				}
 			}
-			return r;
+			return result;
 		},
 
-	match=
-		function(e,s){
-			var i,j,l,r,
-				M,T,I,C,
-				m=false,
-				n=e.nodeName.toLowerCase(),
-				c=(' '+e.className+' ').replace(/\s\s+/g,' ');
-			if(typeof s=='string'){
-				if(NW.Dom&&typeof NW.Dom.match=='function'){
-					if(NW.Dom.match(e,s)){
-						m=true;
+	match =
+		function(element, selector) {
+			var j, matched = false,
+				match, id, tagName, className,
+				name = element.nodeName.toLowerCase(),
+				klass = (' ' + element.className + ' ').replace(/\s\s+/g,' ');
+			if (typeof selector == 'string') {
+				if (NW.Dom && typeof NW.Dom.match == 'function') {
+					if (NW.Dom.match(element, selector)) {
+						matched = true;
 					}
-				}else if(s.match(E['A'])){
-					M=s.match(E['T']);T=M?M[1]:'*';
-					M=s.match(E['I']);I=M?M[1]:null;
-					M=s.match(E['C']);C=M?M[1]:null;
-					if(((!T||T=='*'||T==n)&&
-						(!I||I==e.target.id)&&
-						(!C||c.indexOf(' '+C+' ')>-1))){
-						m=true;
+				}else if (selector.match(Patterns.all)) {
+					match = selector.match(Patterns.tagName);
+					tagName = match ? match[1] : '*';
+					match = selector.match(Patterns.id);
+					id = match ? match[1] : null;
+					match = selector.match(Patterns.className);
+					className = match ? match[1] : null;
+					if ((!id || id == element.target.id) &&
+						(!tagName || tagName == '*' || tagName == name) &&
+						(!className || klass.indexOf(' ' + className + ' ') >- 1)) {
+						matched = true;
 					}
 				}
-			}else{
-				if(s!=e){
-					for(j in s){
-						if(j=='nodeName'){
-							if(s[j].toLowerCase()==n){
-								m=true;
+			} else {
+				if (selector != element) {
+					for(j in selector) {
+						if (j == 'nodeName') {
+							if (selector[j].toLowerCase() == name) {
+								matched = true;
 								break;
 							}
-						}else if(j=='className'){
-							if(c.indexOf(' '+s[j]+' ')>-1){
-								m=true;
+						} else if (j == 'className') {
+							if (klass.indexOf(' ' + selector[j] + ' ') >- 1) {
+								matched = true;
 								break;
 							}
-						}else{
-							if(s[j]===e[j]){
-								m=true;
+						} else {
+							if (selector[j] === element[j]) {
+								matched = true;
 								break;
 							}
 						}
 					}
 				}
 			}
-			return m;
+			return matched;
 		},
 
-	synthesize=
-		function(o,t,c){
+	synthesize =
+		function(object, type, capture) {
 			return {
-				type:t,
-				target:o,
-				bubbles:true,
-				cancelable:true,
-				currentTarget:o,
-				relatedTarget:null,
-				timeStamp:+new Date(),
-				preventDefault:preventDefault,
-				stopPropagation:stopPropagation,
-				eventPhase:c?CAPTURING_PHASE:BUBBLING_PHASE
+				type: type,
+				target: object,
+				bubbles: true,
+				cancelable: true,
+				currentTarget: object,
+				relatedTarget: null,
+				timeStamp: +new Date(),
+				preventDefault: preventDefault,
+				stopPropagation: stopPropagation,
+				eventPhase: capture ? CAPTURING_PHASE : BUBBLING_PHASE
 			};
 		},
 
-	propagate=
-		function(e){
-			var r=true,t=e.target||e.srcElement;
-			t['__'+e.type]=false;
-			NW.Event.removeHandler(t,e.type,arguments.callee,false);
-			r&&(r=propagatePhase(t,e.type,true));
-			r&&(r=propagatePhase(t,e.type,false));
-			r&&t[e.type]&&t[e.type]();
-			return r;
+	propagate =
+		function(event) {
+			var result = true, target = event.target || event.srcElement;
+			target['__' + event.type] = false;
+			NW.Event.removeHandler(target, event.type, arguments.callee, false);
+			result && (result = propagatePhase(target, event.type, true));
+			result && (result = propagatePhase(target, event.type, false));
+			result && target[event.type] && target[event.type]();
+			return result;
 		},
 
-	propagatePhase=
-		function(o,t,c){
-			var i,l,
-				r=true,
-				n=o,p=[],
-				e=synthesize(o,t,c);
-			e.propagated=true;
-			while(n){
-				p.push(n);
-				n=n.parentNode;
+	propagatePhase =
+		function(object, type, capture) {
+			var i, l,
+				result = true,
+				node = object, ancestors = [],
+				event = synthesize(object, type, capture);
+			event.propagated=true;
+			while(node) {
+				ancestors.push(node);
+				node = node.parentNode;
 			}
-			l=p.length;
-			if(c)p.reverse();
-			for(i=0;l>i;i++){
-				e.currentTarget=p[i];
-				e.eventPhase=c?CAPTURING_PHASE:BUBBLING_PHASE;
-				if(handleListeners.call(p[i],e)===false||e.returnValue===false){
-					r=false;
+			l = ancestors.length;
+			if (capture) ancestors.reverse();
+			for(i = 0; l > i; i++) {
+				event.currentTarget = ancestors[i];
+				event.eventPhase = capture ? CAPTURING_PHASE : BUBBLING_PHASE;
+				if (handleListeners.call(ancestors[i], event) === false || event.returnValue === false) {
+					result = false;
 					break;
 				}
 			}
-			delete e.propagated;
-			return r;
+			delete event.propagated;
+			return result;
 		},
 
-	propagateActivation=
-		function(e){
-			var r=true,t=e.target;
-			r&&(r=propagatePhase(t,e.type,true));
-			r&&(r=propagatePhase(t,e.type,false));
-			r||e.preventDefault();
-			return r;
+	propagateActivation =
+		function(event) {
+			var result = true, target = event.target;
+			result && (result = propagatePhase(target, event.type, true));
+			result && (result = propagatePhase(target, event.type, false));
+			result || event.preventDefault();
+			return result;
 		},
 
-	propagateIEActivation=
-		function(e){
-			var r=true,t=e.srcElement;
-			if(e.type=='beforedeactivate'){
-				r&&(r=propagatePhase(t,'blur',true));
-				r&&(r=propagatePhase(t,'blur',false));
+	propagateIEActivation =
+		function(event) {
+			var result = true, target = event.srcElement;
+			if (event.type == 'beforedeactivate') {
+				result && (result = propagatePhase(target, 'blur', true));
+				result && (result = propagatePhase(target, 'blur', false));
 			}
-			if(e.type=='beforeactivate'){
-				r&&(r=propagatePhase(t,'focus',true));
-				r&&(r=propagatePhase(t,'focus',false));
+			if (event.type == 'beforeactivate') {
+				result && (result = propagatePhase(target, 'focus', true));
+				result && (result = propagatePhase(target, 'focus', false));
 			}
-			r||(e.returnValue=false);
-			return r;
+			result || (event.returnValue = false);
+			return result;
 		},
 
-	propagateFormAction=
-		function(e){
-			var t=e.target||e.srcElement,T=t.type;
-			if(/file|text|password/.test(T)&&e.keyCode==13){
-					T='submit';
-					t=t.form;
-			}else if(/select-(one|multi)/.test(T)){
-					T='change';
-			}else if(/reset|submit/.test(T)){
-					t=t.form;
+	propagateFormAction =
+		function(event) {
+			var target = event.target || event.srcElement, type = target.type;
+			if (/file|text|password/.test(type) && event.keyCode == 13) {
+					type = 'submit';
+					target = target.form;
+			} else if (/select-(one|multi)/.test(type)) {
+					type = 'change';
+			} else if (/reset|submit/.test(type)) {
+					target = target.form;
 			}
-			if(t&&!t['__'+T]){
-				t['__'+T]=true;
-				NW.Event.appendHandler(t,T,propagate,false);
+			if (target && !target['__' + type]) {
+				target['__' + type] = true;
+				NW.Event.appendHandler(target, type, propagate, false);
 			}
 		},
 
-	enablePropagation=
-		function(o){
-			var w=getContext(o),d=w.document;
-			if(!forcedPropagation){
-				forcedPropagation=true;
-				NW.Event.appendHandler(w,'unload',
-					function(e){
-						NW.Event.removeListener(w,e.type,arguments.callee,false);
-						disablePropagation(o);
+	enablePropagation =
+		function(object) {
+			var win = getContext(object), doc = win.document;
+			if (!forcedPropagation) {
+				forcedPropagation = true;
+				NW.Event.appendHandler(win, 'unload',
+					function(event) {
+						NW.Event.removeListener(win, event.type, arguments.callee, false);
+						disablePropagation(object);
 					},false
 				);
-				NW.Event.appendHandler(d,'click',propagateFormAction,true);
-				NW.Event.appendHandler(d,'keyup',propagateFormAction,true);
-				if(d.addEventListener){
-					NW.Event.appendHandler(d,'blur',propagateActivation,true);
-					NW.Event.appendHandler(d,'focus',propagateActivation,true);
-				}else if(d.attachEvent){
-					NW.Event.appendHandler(d,'beforeactivate',propagateIEActivation,true);
-					NW.Event.appendHandler(d,'beforedeactivate',propagateIEActivation,true);
+				NW.Event.appendHandler(doc, 'click', propagateFormAction, true);
+				NW.Event.appendHandler(doc, 'keyup', propagateFormAction, true);
+				if (doc.addEventListener) {
+					NW.Event.appendHandler(doc, 'blur', propagateActivation, true);
+					NW.Event.appendHandler(doc, 'focus', propagateActivation, true);
+				} else if (doc.attachEvent) {
+					NW.Event.appendHandler(doc, 'beforeactivate', propagateIEActivation, true);
+					NW.Event.appendHandler(doc, 'beforedeactivate', propagateIEActivation, true);
 				}
 			}
 		},
 
-	disablePropagation=
-		function(o){
-			var w=getContext(o),d=w.document;
-			if(forcedPropagation){
-				forcedPropagation=false;
-				NW.Event.removeHandler(d,'click',propagateFormAction,true);
-				NW.Event.removeHandler(d,'keyup',propagateFormAction,true);
-				if(d.removeEventListener){
-					NW.Event.removeHandler(d,'blur',propagateActivation,true);
-					NW.Event.removeHandler(d,'focus',propagateActivation,true);
-				}else if(d.detachEvent){
-					NW.Event.removeHandler(d,'beforeactivate',propagateIEActivation,true);
-					NW.Event.removeHandler(d,'beforedeactivate',propagateIEActivation,true);
+	disablePropagation =
+		function(object) {
+			var win = getContext(object), doc = win.document;
+			if (forcedPropagation) {
+				forcedPropagation = false;
+				NW.Event.removeHandler(doc, 'click', propagateFormAction, true);
+				NW.Event.removeHandler(doc, 'keyup', propagateFormAction, true);
+				if (doc.removeEventListener) {
+					NW.Event.removeHandler(doc, 'blur', propagateActivation, true);
+					NW.Event.removeHandler(doc, 'focus', propagateActivation, true);
+				} else if (doc.detachEvent) {
+					NW.Event.removeHandler(doc, 'beforeactivate', propagateIEActivation, true);
+					NW.Event.removeHandler(doc, 'beforedeactivate', propagateIEActivation, true);
 				}
 			}
 		};
 
 	return {
 
-		EVENTS_W3C:true,
+		EVENTS_W3C: true,
 
 		stop:
-			function(e){
-				if(e.preventDefault){
-					e.preventDefault();
-				}else{
-					e.returnValue=false;
+			function(event) {
+				if (event.preventDefault) {
+					event.preventDefault();
+				} else {
+					event.returnValue = false;
 				}
-				if(e.stopPropagation){
-					e.stopPropagation();
-				}else{
-					e.cancelBubble=true;
+				if (event.stopPropagation) {
+					event.stopPropagation();
+				} else {
+					event.cancelBubble = true;
 				}
 				return false;
 			},
 
 		dispatch:
-			function(o,t,c){
-				var e,r,d=getContext(o).document;
-				if(o.fireEvent){
-					e=d.createEventObject();
-					e.type=t;
-					e.target=o;
-					e.eventPhase=0;
-					e.currentTarget=o;
-					e.cancelBubble=!!c;
-					e.returnValue=undefined;
-					r=o.fireEvent('on'+t,fixEvent(o,e,c));
-				}else{
-					if(/mouse|click/.test(t)){
-						e=d.createEvent('MouseEvents');
-						e.initMouseEvent(t,true,true,window,0,0,0,0,0,false,false,false,false,0,null);
-					}else if(/key(down|press|out)/.test(t)){
-						e=d.createEvent('KeyEvents');
-						e.initKeyEvent(t,true,true,window,false,false,false,false,0,0);
-					}else{
-						e=d.createEvent('HTMLEvents');
-						e.initEvent(t,true,true);
+			function(object, type, capture) {
+				var event, result, win = getContext(object), doc = win.document;
+				if (object.fireEvent) {
+					event = doc.createEventObject();
+					event.type = type;
+					event.target = object;
+					event.eventPhase = 0;
+					event.currentTarget = object;
+					event.cancelBubble= !!capture;
+					event.returnValue= undefined;
+					result = object.fireEvent('on' + type, fixEvent(object, event, capture));
+				} else {
+					if (/mouse|click/.test(type)) {
+						event = doc.createEvent('MouseEvents');
+						event.initMouseEvent(type, true, true, win, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+					} else if (/key(down|press|out)/.test(type)) {
+						event = doc.createEvent('KeyEvents');
+						event.initKeyEvent(type, true, true, win, false, false, false, false, 0, 0);
+					} else {
+						event = doc.createEvent('HTMLEvents');
+						event.initEvent(type, true, true);
 					}
-					r=o.dispatchEvent(e);
+					result = object.dispatchEvent(event);
 				}
-				return r;
+				return result;
 			},
 
 		appendHandler:
-			function(o,t,h,c){
-				var k;
-				H[t]||(H[t]={o:[],f:[],p:[],w:[]});
-				if((k=isRegistered(H[t],o,t,h,c))===false){
-					H[t].o.push(o);
-					H[t].f.push(h);
-					H[t].p.push(c);
-					if(o.addEventListener&&NW.Event.EVENTS_W3C){
-						o.addEventListener(t,h,c||false);
-					}else if(o.attachEvent&&NW.Event.EVENTS_W3C){
-						k=H[t].w.push(
-							function(e){
-								return h.call(o,fixEvent(o,e,c));
+			function(object, type, handler, capture) {
+				var key;
+				Handlers[type] || (Handlers[type] = {
+					objects: [],
+					funcs: [],
+					parms: [],
+					wraps: []
+				});
+				if ((key = isRegistered(Handlers[type], object, type, handler, capture)) === false) {
+					Handlers[type].objects.push(object);
+					Handlers[type].funcs.push(handler);
+					Handlers[type].parms.push(capture);
+					if (object.addEventListener && NW.Event.EVENTS_W3C) {
+						object.addEventListener(type, handler, capture || false);
+					} else if (object.attachEvent && NW.Event.EVENTS_W3C) {
+						key = Handlers[type].wraps.push(
+							function(event) {
+								return handler.call(object, fixEvent(object, event, capture));
 							}
 						);
-						o.attachEvent('on'+t,H[t].w[k-1]);
+						object.attachEvent('on' + type, Handlers[type].wraps[key - 1]);
 					}else{
-						if(H[t].o.length===0){
-							if(typeof o['on'+t]=='function'){
-								H[t].o.push(o);
-								H[t].f.push(o['on'+t]);
-								H[t].p.push(c);
+						if (Handlers[type].objects.length === 0) {
+							if(typeof object['on' + type] == 'function') {
+								Handlers[type].objects.push(object);
+								Handlers[type].funcs.push(object['on' + type]);
+								Handlers[type].parms.push(capture);
 							}
-							o['on'+t]=
-								function(e){
-									return h.call(this,fixEvent(this,e,c));
+							o['on' + type] =
+								function(event) {
+									return handler.call(this, fixEvent(this, event, capture));
 								};
 						}
 					}
@@ -409,104 +417,113 @@ NW.Event=function(){
 			},
 
 		removeHandler:
-			function(o,t,h,c){
-				var k;
-				if(H[t]&&(k=isRegistered(H[t],o,t,h,c))!==false){
-					H[t].o.splice(k,1);
-					H[t].f.splice(k,1);
-					H[t].p.splice(k,1);
-					if(o.removeEventListener&&NW.Event.EVENTS_W3C){
-						o.removeEventListener(t,h,c||false);
-					}else if(o.detachEvent&&NW.Event.EVENTS_W3C){
-						o.detachEvent('on'+t,H[t].w[k]);
-						H[t].w.splice(k,1);
-					}else{
-						if(H[t].o.length==1){
-							o['on'+t]=H[t].o[0];
-							H[t].o.splice(0,1);
-							H[t].f.splice(0,1);
-							H[t].p.splice(0,1);
+			function(object, type, handler, capture) {
+				var key;
+				if (Handlers[type] && (key = isRegistered(Handlers[type], object, type, handler, capture)) !== false) {
+					Handlers[type].objects.splice(key, 1);
+					Handlers[type].funcs.splice(key, 1);
+					Handlers[type].parms.splice(key, 1);
+					if (object.removeEventListener && NW.Event.EVENTS_W3C) {
+						object.removeEventListener(type, handler, capture || false);
+					} else if (object.detachEvent && NW.Event.EVENTS_W3C) {
+						object.detachEvent('on' + type, Handlers[type].wraps[k]);
+						Handlers[type].wraps.splice(key, 1);
+					} else {
+						if (Handlers[type].o.length == 1) {
+							objects['on' + type] = Handlers[type].objects[0];
+							Handlers[type].objects.splice(0, 1);
+							Handlers[type].funcs.splice(0, 1);
+							Handlers[type].parms.splice(0, 1);
 						}
 					}
-					if(H[t].o.length===0){
-						delete H[t];
+					if (Handlers[type].objects.length === 0) {
+						delete Handlers[type];
 					}
 				}
 				return this;
 			},
 
 		appendListener:
-			function(o,t,h,c){
-				var k;
-				L[t]||(L[t]={o:[],f:[],p:[],w:[]});
-				if((k=isRegistered(L[t],o,t,h,c))===false){
-					if(!forcedPropagation){
-						enablePropagation(o);
+			function(object, type, handler, capture) {
+				var key;
+				Listeners[type] || (Listeners[type] = {
+					objects: [],
+					funcs: [],
+					parms: [],
+					wraps: []
+				});
+				if ((key = isRegistered(Listeners[type], object, type, handler, capture)) === false) {
+					if (!forcedPropagation) {
+						enablePropagation(object);
 					}
-					L[t].o.push(o);
-					L[t].f.push(h);
-					L[t].p.push(c);
-					if(o.addEventListener){
-						o.addEventListener(t,handleListeners,c||false);
-					}else if(o.attachEvent){
-						k=L[t].w.push(
-							function(e){
-								return handleListeners.call(o,fixEvent(o,e,c));
+					Listeners[type].objects.push(object);
+					Listeners[type].funcs.push(handler);
+					Listeners[type].parms.push(capture);
+					if (object.addEventListener) {
+						object.addEventListener(type, handleListeners, capture || false);
+					}else if (object.attachEvent) {
+						key = Listeners[type].w.push(
+							function(event) {
+								return handleListeners.call(object, fixEvent(object, event, capture));
 							}
 						);
-						o.attachEvent('on'+t,L[t].w[k-1]);
+						object.attachEvent('on' + type, Listeners[type].wraps[key - 1]);
 					}
 				}
 				return this;
 			},
 
 		removeListener:
-			function(o,t,h,c){
-				var k;
-				if(L[t]&&(k=isRegistered(L[t],o,t,h,c))!==false){
-					L[t].o.splice(k,1);
-					L[t].f.splice(k,1);
-					L[t].p.splice(k,1);
-					if(o.removeEventListener){
-						o.removeEventListener(t,handleListeners,c||false);
-					}else if(o.detachEvent){
-						o.detachEvent('on'+t,L[t].w[k]);
-						L[t].w.splice(k,1);
+			function(object, type, handler, capture) {
+				var key;
+				if (Listeners[type] && (key = isRegistered(Listeners[type], object, type, handler, capture)) !== false) {
+					Listeners[type].objects.splice(key, 1);
+					Listeners[type].funcs.splice(key, 1);
+					Listeners[type].parms.splice(key, 1);
+					if (object.removeEventListener) {
+						object.removeEventListener(type, handleListeners, capture || false);
+					} else if (object.detachEvent) {
+						object.detachEvent('on' + type, Listeners[type].wraps[key]);
+						Listeners[type].wraps.splice(key, 1);
 					}
-					if(L[t].o.length===0){
-						delete L[t];
+					if (Listeners[type].objects.length === 0) {
+						delete Listeners[type];
 					}
 				}
 				return this;
 			},
 
 		appendDelegate:
-			function(o,t,h,d){
-				var k;
-				d=d||document.documentElement;
-				D[t]||(D[t]={o:[],f:[],p:[]});
-				if((k=isRegistered(D[t],o,t,h,d))===false){
-					D[t].o.push(o);
-					D[t].f.push(h);
-					D[t].p.push(d);
-					if(D[t].o.length===1){
-						NW.Event.appendListener(d,t,handleDelegates,true);
+			function(object, type, handler, delegate) {
+				var key;
+				delegate = delegate || document.documentElement;
+				Delegates[type] || (Delegates[type] = {
+					objects: [],
+					funcs: [],
+					parms: []
+				});
+				if ((key = isRegistered(Delegates[type], object, type, handler, delegate)) === false) {
+					Delegates[type].objects.push(object);
+					Delegates[type].funcs.push(handler);
+					Delegates[type].parms.push(delegate);
+					if (Delegates[type].objects.length === 1) {
+						NW.Event.appendListener(delegate, type, handleDelegates, true);
 					}
 				}
 				return this;
 			},
 
 		removeDelegate:
-			function(o,t,h,d){
-				var k;
-				d=d||document.documentElement;
-				if(D[t]&&(k=isRegistered(D[t],o,t,h,d))!==false){
-					D[t].o.splice(k,1);
-					D[t].f.splice(k,1);
-					D[t].p.splice(k,1);
-					if(D[t].o.length===0){
-						delete D[t];
-						NW.Event.removeListener(d,t,handleDelegates,true);
+			function(object, type, handler, delegate) {
+				var key;
+				delegate = delegate || document.documentElement;
+				if (Delegates[type] && (key = isRegistered(Delegates[type], object, type, handler, delegate)) !== false) {
+					Delegates[type].objects.splice(key, 1);
+					Delegates[type].funcs.splice(key, 1);
+					Delegates[type].parms.splice(key, 1);
+					if (Delegates[type].objects.length === 0) {
+						delete Delegates[type];
+						NW.Event.removeListener(delegate, type, handleDelegates, true);
 					}
 				}
 				return this;
