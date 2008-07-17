@@ -7,7 +7,7 @@
  * Author: Diego Perini <diego.perini at gmail com>
  * Version: 1.09
  * Created: 20051016
- * Release: 20080624
+ * Release: 20080717
  *
  * License:
  *	http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -20,7 +20,7 @@ window.NW || (window.NW = {});
 NW.Event = function() {
 
 	var version = '1.09',
-		release = '20080624',
+		release = '20080717',
 
 	// event collections
 	Handlers = {},
@@ -91,7 +91,7 @@ NW.Event = function() {
 		function(array, object, type, handler, capture) {
 			var i, l, found = false;
 			if (array && array.objects) {
-				for(i = 0, l = array.objects.length; l > i; i++) {
+				for (i = 0, l = array.objects.length; l > i; i++) {
 					if (array.objects[i] === object &&
 						array.funcs[i] === handler &&
 						array.parms[i] === capture) {
@@ -126,7 +126,7 @@ NW.Event = function() {
 				funcs = Listeners[type].funcs.slice();
 				parms = Listeners[type].parms.slice();
 				// process chain in fifo order
-				for(i = 0, l = objects.length; l > i; i++) {
+				for (i = 0, l = objects.length; l > i; i++) {
 					// element match current target ? 
 					if (objects[i] === this
 						&& (
@@ -163,7 +163,7 @@ NW.Event = function() {
 				funcs = Delegates[type].funcs.slice();
 				parms = Delegates[type].parms.slice();
 				// process chain in fifo order
-				for(i = 0, l = objects.length; l > i; i++) {
+				for (i = 0, l = objects.length; l > i; i++) {
 					// if event.target matches one of the registered objects and
 					// if "this" element matches one of the registered delegates
 					if (match(event.target, objects[i]) && parms[i] === this) {
@@ -192,7 +192,7 @@ NW.Event = function() {
 					if (NW.Dom.match(element, selector)) {
 						matched = true;
 					}
-				}else if (selector.match(Patterns.all)) {
+				} else if (selector.match(Patterns.all)) {
 					// use a simple selector match (id, tag, class)
 					match = selector.match(Patterns.tagName);
 					tagName = match ? match[1] : '*';
@@ -210,7 +210,7 @@ NW.Event = function() {
 				// a selector matcher object
 				if (selector != element) {
 					// match on property/values
-					for(j in selector) {
+					for (j in selector) {
 						if (j == 'nodeName') {
 							// handle upper/lower case tagName
 							if (selector[j].toLowerCase() == name) {
@@ -288,7 +288,7 @@ NW.Event = function() {
 			// capturing, reverse ancestors collection
 			if (capture) ancestors.reverse();
 			// execute registered handlers in fifo order
-			for(i = 0, l = ancestors.length; l > i; i++) {
+			for (i = 0, l = ancestors.length; l > i; i++) {
 				// set currentTarget to current ancestor 
 				event.currentTarget = ancestors[i];
 				// set eventPhase to the requested phase
@@ -559,8 +559,8 @@ NW.Event = function() {
 					Listeners[type].parms.push(capture);
 					if (object.addEventListener) {
 						object.addEventListener(type, handleListeners, capture || false);
-					}else if (object.attachEvent) {
-						key = Listeners[type].w.push(
+					} else if (object.attachEvent) {
+						key = Listeners[type].wraps.push(
 							function(event) {
 								return handleListeners.call(object, fixEvent(object, event, capture));
 							}
@@ -613,7 +613,7 @@ NW.Event = function() {
 					Delegates[type].funcs.push(handler);
 					Delegates[type].parms.push(delegate);
 					// if first delegate for this event type
-					if (Delegates[type].objects.length === 1) {
+					if (Delegates[type].objects.length == 1) {
 						// append the real event lisyener for this chain
 						NW.Event.appendListener(delegate, type, handleDelegates, true);
 					}
