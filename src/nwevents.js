@@ -7,7 +7,7 @@
  * Author: Diego Perini <diego.perini at gmail com>
  * Version: 1.09
  * Created: 20051016
- * Release: 20080717
+ * Release: 20080718
  *
  * License:
  *	http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -20,7 +20,6 @@ window.NW || (window.NW = {});
 NW.Event = function() {
 
 	var version = '1.09',
-		release = '20080717',
 
 	// event collections
 	Handlers = {},
