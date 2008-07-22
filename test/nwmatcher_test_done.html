@@ -376,6 +376,7 @@
         testSelectorWithFirstLastNthNthLastOfType: function() {
           this.assertEnumEqual([$('link_2')], $$('#p a:nth-of-type(2)'), 'nth-of-type');
           this.assertEnumEqual([$('link_1')], $$('#p a:nth-of-type(1)'), 'nth-of-type');
+// reversed last-of-type counter
 //          this.assertEnumEqual([$('link_2')], $$('#p a:nth-last-of-type(1)'), 'nth-last-of-type');
           this.assertEnumEqual([$('link_1')], $$('#p a:first-of-type'), 'first-of-type');
           this.assertEnumEqual([$('link_2')], $$('#p a:last-of-type'), 'last-of-type');
@@ -385,11 +386,13 @@
           this.assertEnumEqual([$('link_2')], $$('#p a:not(a:first-of-type)'), 'first-of-type');
           this.assertEnumEqual([$('link_1')], $$('#p a:not(a:last-of-type)'), 'last-of-type');
           this.assertEnumEqual([$('link_2')], $$('#p a:not(a:nth-of-type(1))'), 'nth-of-type');
+// depend on last-of-type (see above)
 //          this.assertEnumEqual([$('link_1')], $$('#p a:not(a:nth-last-of-type(1))'), 'nth-last-of-type');
           this.assertEnumEqual([$('link_2')], $$('#p a:not([rel~=nofollow])'), 'attribute 1');
           this.assertEnumEqual([$('link_2')], $$('#p a:not(a[rel^=external])'), 'attribute 2');
           this.assertEnumEqual([$('link_2')], $$('#p a:not(a[rel$=nofollow])'), 'attribute 3');
           this.assertEnumEqual([$('em')], $$('#p a:not(a[rel$="nofollow"]) > em'), 'attribute 4')
+// regular expressions problems :-(
 //          this.assertEnumEqual([$('item_2')], $$('#list li:not(#item_1):not(#item_3)'), 'adjacent :not clauses');
 //          this.assertEnumEqual([$('son')], $$('#grandfather > div:not(#uncle) #son'));
 //          this.assertEnumEqual([$('em')], $$('#p a:not(a[rel$="nofollow"]) em'), 'attribute 4 + all descendants');
@@ -398,7 +401,7 @@
 
         testSelectorWithEnabledDisabledChecked: function() {
           this.assertEnumEqual([$('disabled_text_field')], $$('#troubleForm > *:disabled'));
-//          this.assertEnumEqual($('troubleForm').getInputs().without($('disabled_text_field'), $('hidden')), $$('#troubleForm > *:enabled'));
+          this.assertEnumEqual($('troubleForm').getInputs().without($('disabled_text_field'), $('hidden')), $$('#troubleForm > *:enabled'));
           this.assertEnumEqual($('checked_box', 'checked_radio'), $$('#troubleForm *:checked'));
         },
 
@@ -418,9 +421,11 @@
           this.assertEnumEqual($$('ul > li:nth-child(even)'), $$('ul > li:nth-child(2n)'));
           this.assertEnumEqual($$('ul > li:nth-child(odd)'), $$('ul > li:nth-child(2n+1)'));
           this.assertEnumEqual($$('ul > li:first-child'), $$('ul > li:nth-child(1)'));
+// reversed last-child counter
 //          this.assertEnumEqual($$('ul > li:last-child'), $$('ul > li:nth-last-child(1)'));
 //          this.assertEnumEqual($$('ul > li:nth-child(n-999)'), $$('ul > li'));
           this.assertEnumEqual($$('ul > li'), $$('ul > li'));
+// :not (a problem...and a real pain)
 //          this.assertEnumEqual($$('#p a:not(a[rel$="nofollow"])>em'), $$('#p a:not(a[rel$="nofollow"]) > em'))
         },
 
@@ -432,6 +437,7 @@
         },
 
         testCommasFor$$: function() {
+// regular expression tweaking quote/commas ???
 //          this.assertEnumEqual($('list', 'p', 'link_1', 'item_1', 'item_3', 'troubleForm'), $$('#list, .first,*[xml:lang="es-us"] , #troubleForm'));
 //          this.assertEnumEqual($('list', 'p', 'link_1', 'item_1', 'item_3', 'troubleForm'), $$('#list, .first,', '*[xml:lang="es-us"] , #troubleForm'));
 //          this.assertEnumEqual($('commaParent', 'commaChild'), $$('form[title*="commas,"], input[value="#commaOne,#commaTwo"]'));
