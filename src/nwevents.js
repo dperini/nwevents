@@ -514,7 +514,7 @@ NW.Event = function() {
             object.removeEventListener(type, handler, capture || false);
           } else if (object.detachEvent && NW.Event.EVENTS_W3C) {
             // use MSIE event deregistration
-            object.detachEvent('on' + type, Handlers[type].wraps[k]);
+            object.detachEvent('on' + type, Handlers[type].wraps[key]);
             // remove wrapper function from the chain
             Handlers[type].wraps.splice(key, 1);
           } else {
