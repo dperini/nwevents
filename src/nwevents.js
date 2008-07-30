@@ -108,7 +108,7 @@ NW.Event = function() {
       var i, l, objects, funcs, parms,
         result = true, type = event.type;
       if (forcedPropagation) {
-        if (/focus|blur|change|reset|submit/i.test(event.type) && !event.propagated) {
+        if ("|focus|blur|change|reset|submit|".indexOf(event.type) > -1 && !event.propagated) {
           if (event.preventDefault) {
             event.preventDefault();
           } else {
@@ -365,8 +365,8 @@ NW.Event = function() {
         NW.Event.appendHandler(doc, 'keyup', propagateFormAction, true);
         if (doc.addEventListener) {
           // register capturing focus and blur event handlers
-          NW.Event.appendHandler(doc, 'focus', propagateActivation, true);
           NW.Event.appendHandler(doc, 'blur', propagateActivation, true);
+          NW.Event.appendHandler(doc, 'focus', propagateActivation, true);
         } else if (doc.attachEvent) {
           // register emulated capturing focus and blur event handlers (for IE)
           NW.Event.appendHandler(doc, 'beforeactivate', propagateIEActivation, true);
