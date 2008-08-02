@@ -33,7 +33,7 @@ NW.Event = function() {
 
   // for simple delegation
   Patterns = {
-    'all': /^[\.\-\#\w]+$/,
+    'all': /^[\.\-\#\w\*]+$/,
     'tagName': /^([^#\.]+)/,
     'id': /#([^\.]+)/,
     'className': /\.([^#]+)/
@@ -181,10 +181,7 @@ NW.Event = function() {
   // CSS3 selector engine if it is available
   match =
     function(element, selector) {
-      var j, matched = false,
-        match, id, tagName, className,
-        name = element.nodeName.toLowerCase(),
-        klass = (' ' + element.className + ' ').replace(/\s\s+/g,' ');
+      var j, id, tagName, className, match, matched = false;
       if (typeof selector == 'string') {
         if (NW.Dom && typeof NW.Dom.match == 'function') {
           // use nwmatcher as full CSS3 selector engine
@@ -199,32 +196,32 @@ NW.Event = function() {
           id = match ? match[1] : null;
           match = selector.match(Patterns.className);
           className = match ? match[1] : null;
-          if ((!id || id == element.target.id) &&
-            (!tagName || tagName == '*' || tagName == name) &&
-            (!className || klass.indexOf(' ' + className + ' ') >- 1)) {
+          if ((!id || id == element.id) &&
+            (!tagName || tagName == '*' || tagName == element.nodeName.toLowerCase()) &&
+            (!className || (' ' + element.className + ' ').replace(/\s\s+/g,' ').indexOf(' ' + className + ' ') > -1)) {
             matched = true;
           }
         }
       } else {
         // a selector matcher object
-        if (selector != element) {
+        if (typeof selector == 'object') {
           // match on property/values
           for (j in selector) {
-            if (j == 'nodeName') {
-              // handle upper/lower case tagName
-              if (selector[j].toLowerCase() == name) {
+            if (j == 'className') {
+              // handle special className matching
+              if ((' ' + element.className + ' ').replace(/\s\s+/g,' ').indexOf(' ' + selector[j] + ' ') > -1) {
                 matched = true;
                 break;
               }
-            } else if (j == 'className') {
-              // handle special className matching
-              if (klass.indexOf(' ' + selector[j] + ' ') >- 1) {
+            } else if (j == 'nodeName' || j == 'tagName') {
+              // handle upper/lower case tagName
+              if (element.nodeName.toLowerCase() == selector[j].toLowerCase()) {
                 matched = true;
                 break;
               }
             } else {
               // handle matching other properties
-              if (selector[j] === element[j]) {
+              if (element[j] === selector[j]) {
                 matched = true;
                 break;
               }
