@@ -5,9 +5,9 @@
  * nwevents.js - Javascript Event Manager
  *
  * Author: Diego Perini <diego.perini at gmail com>
- * Version: 1.09
+ * Version: 1.10
  * Created: 20051016
- * Release: 20080718
+ * Release: 20080803
  *
  * License:
  *  http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -19,7 +19,7 @@ window.NW || (window.NW = {});
 
 NW.Event = function() {
 
-  var version = '1.09',
+  var version = '1.10',
 
   // event collections
   Handlers = {},
