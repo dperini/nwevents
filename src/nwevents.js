@@ -277,13 +277,7 @@ NW.Event = function() {
       // execute the bubbling phase
       result && (result = propagatePhase(target, event.type, false));
       // execute existing native method if not overwritten by users
-      if (result && target[event.type] && !target[event.type].nodeType) {
-        try {
-          target[event.type]();
-        } catch(e) {
-          throw new Error('Form methods overwritten. Check element names for reserved words.');
-        }
-      }
+      result && /^\s*function\s+/.test(target[event.type] + '') && target[event.type]();
       return result;
     },
 
