@@ -358,15 +358,17 @@ NW.Event = function() {
             context.focusElement = target;
           }
         }
-        if (/file|text|password/.test(type)) {
+        if (/file|text|password/.test(type) && event.keyCode == 13) {
           type = 'submit';
           target = target.form;
         } else if (/select-(one|multi)/.test(type)) {
           type = 'change';
         } else if (/reset|submit/.test(type)) {
           target = target.form;
+        } else {
+          return;
         }
-        if (!target['__' + type]) {
+        if (target && !target['__' + type]) {
           target['__' + type] = true;
           NW.Event.appendHandler(target, type, propagate, false);
         }
@@ -382,12 +384,12 @@ NW.Event = function() {
         // deregistration on page unload
         NW.Event.appendHandler(win, 'beforeunload',
           function(event) {
-            NW.Event.removeHandler(win, event.type, arguments.callee, false);
+            NW.Event.removeHandler(win, 'beforeunload', arguments.callee, false);
             disablePropagation(object);
           },false
         );
-        // register capturing keyup and mousedown event handlers
-        NW.Event.appendHandler(doc, 'keyup', propagateFormAction, true);
+        // register capturing keydown and mousedown event handlers
+        NW.Event.appendHandler(doc, 'keydown', propagateFormAction, true);
         NW.Event.appendHandler(doc, 'mousedown', propagateFormAction, true);
         if (doc.addEventListener) {
           // register capturing focus and blur event handlers
@@ -407,8 +409,8 @@ NW.Event = function() {
       var win = getContext(object), doc = win.document;
       if (forcedPropagation) {
         forcedPropagation = false;
-        // deregister capturing keyup and mousedown event handlers
-        NW.Event.removeHandler(doc, 'keyup', propagateFormAction, true);
+        // deregister capturing keydown and mousedown event handlers
+        NW.Event.removeHandler(doc, 'keydown', propagateFormAction, true);
         NW.Event.removeHandler(doc, 'mousedown', propagateFormAction, true);
         if (doc.removeEventListener) {
           // deregister capturing focus and blur event handlers
