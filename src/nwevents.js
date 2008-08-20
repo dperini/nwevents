@@ -276,7 +276,10 @@ NW.Event = function() {
       result && (result = propagatePhase(target, event.type, true));
       // execute the bubbling phase
       result && (result = propagatePhase(target, event.type, false));
-      // execute existing native method if not overwritten by users
+      // submit/reset events relayed to parent forms
+      // eg. a return key is typed in an input field
+      if (target.form) { target = target.form; }
+      // execute existing native method if not overwritten by html
       result && /^\s*function\s+/.test(target[event.type] + '') && target[event.type]();
       return result;
     },
