@@ -7,7 +7,7 @@
  * Author: Diego Perini <diego.perini at gmail com>
  * Version: 1.11beta
  * Created: 20051016
- * Release: 20080813
+ * Release: 20080822
  *
  * License:
  *  http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -45,22 +45,21 @@ NW.Event = function() {
   // use feature detection, currently FF3, Opera and IE
   hasActive = typeof document.activeElement != 'undefined',
 
-  // fix IE event properties to
-  // best fit with w3c standards
+  // fix IE event properties to comply with w3c standards
   fixEvent =
-    function(object, event, capture) {
+    function(element, event, capture) {
       // needed for DOM0 events
-      event || (event = getContext(object).event);
+      event || (event = getContext(element).event);
       // bound element (listening the event)
-      event.currentTarget = object;
+      event.currentTarget = element;
       // fired element (triggering the event)
-      event.target = event.srcElement || object;
+      event.target = event.srcElement || element;
       // add preventDefault and stopPropagation methods
       event.preventDefault = preventDefault;
       event.stopPropagation = stopPropagation;
       // bound and fired element are the same AT-TARGET
-      event.eventPhase = capture && (event.target == object) ? CAPTURING_PHASE :
-                 (event.target == object ? AT_TARGET : BUBBLING_PHASE);
+      event.eventPhase = capture && (event.target == element) ? CAPTURING_PHASE :
+                (event.target == element ? AT_TARGET : BUBBLING_PHASE);
       // related element (routing of the event)
       event.relatedTarget =
         event[(event.target == event.fromElement ? 'to' : 'from') + 'Element'];
@@ -83,18 +82,18 @@ NW.Event = function() {
 
   // get context for element
   getContext =
-    function(object) {
-      return (object.ownerDocument || object.document || object).parentWindow || window;
+    function(element) {
+      return (element.ownerDocument || element.document || element).parentWindow || window;
     },
 
   // check collection for registered event,
-  // match object, type, handler and capture
+  // match element, type, handler and capture
   isRegistered =
-    function(array, object, type, handler, capture) {
+    function(array, element, type, handler, capture) {
       var i, l, found = false;
-      if (array && array.objects) {
-        for (i = 0, l = array.objects.length; l > i; i++) {
-          if (array.objects[i] === object &&
+      if (array && array.elements) {
+        for (i = 0, l = array.elements.length; l > i; i++) {
+          if (array.elements[i] === element &&
             array.funcs[i] === handler &&
             array.parms[i] === capture) {
             found = i;
@@ -105,11 +104,11 @@ NW.Event = function() {
       return found;
     },
 
-  // get all listener of type for object
+  // get all listener of type for element
   getListeners =
-    function(object, type, handler) {
-      for (var i=0, r = []; Listeners[type].objects.length > i; i++) {
-        if (Listeners[type].objects[i] === object && Listeners[type].funcs[i] === handler) {
+    function(element, type, handler) {
+      for (var i=0, r = []; Listeners[type].elements.length > i; i++) {
+        if (Listeners[type].elements[i] === element && Listeners[type].funcs[i] === handler) {
           r.push(Listeners[type].funcs[i]);
         }
       }
@@ -119,7 +118,7 @@ NW.Event = function() {
   // handle listeners chain for event type
   handleListeners =
     function(event) {
-      var i, l, objects, funcs, parms,
+      var i, l, elements, funcs, parms,
         result = true, type = event.type;
       if (forcedPropagation) {
         if ("|focus|blur|change|reset|submit|".indexOf(event.type) > -1 && !event.propagated) {
@@ -131,17 +130,17 @@ NW.Event = function() {
           return false;
         }
       }
-      if (Listeners[type] && Listeners[type].objects) {
+      if (Listeners[type] && Listeners[type].elements) {
         // make a copy of the Listeners[type] array
         // since it can be modified run time by the
         // events deleting themselves or adding new
-        objects = Listeners[type].objects.slice();
+        elements = Listeners[type].elements.slice();
         funcs = Listeners[type].funcs.slice();
         parms = Listeners[type].parms.slice();
         // process chain in fifo order
-        for (i = 0, l = objects.length; l > i; i++) {
+        for (i = 0, l = elements.length; l > i; i++) {
           // element match current target ?
-          if (objects[i] === this
+          if (elements[i] === this
             && (
               (event.eventPhase == BUBBLING_PHASE && parms[i] === false) ||
               (event.eventPhase == CAPTURING_PHASE && parms[i] === true) ||
@@ -166,20 +165,20 @@ NW.Event = function() {
   // handle delegates chain for event type
   handleDelegates =
     function(event) {
-      var i, l, objects, funcs, parms,
+      var i, l, elements, funcs, parms,
         result = true, type = event.type;
-      if (Delegates[type] && Delegates[type].objects) {
+      if (Delegates[type] && Delegates[type].elements) {
         // make a copy of the Delegates[type] array
         // since it can be modified run time by the
         // events deleting themselves or adding new
-        objects = Delegates[type].objects.slice();
+        elements = Delegates[type].elements.slice();
         funcs = Delegates[type].funcs.slice();
         parms = Delegates[type].parms.slice();
         // process chain in fifo order
-        for (i = 0, l = objects.length; l > i; i++) {
-          // if event.target matches one of the registered objects and
+        for (i = 0, l = elements.length; l > i; i++) {
+          // if event.target matches one of the registered elements and
           // if "this" element matches one of the registered delegates
-          if (match(event.target, objects[i]) && parms[i] === this) {
+          if (match(event.target, elements[i]) && parms[i] === this) {
             // execute registered function in element scope
             if (funcs[i].call(event.target, event) === false) {
               result = false;
@@ -217,8 +216,8 @@ NW.Event = function() {
           }
         }
       } else {
-        // a selector matcher object
-        if (typeof selector == 'object') {
+        // a selector matcher element
+        if (typeof selector == 'element') {
           // match on property/values
           for (j in selector) {
             if (j == 'className') {
@@ -249,13 +248,13 @@ NW.Event = function() {
 
   // create a synthetic event
   synthesize =
-    function(object, type, capture) {
+    function(element, type, capture) {
       return {
         type: type,
-        target: object,
+        target: element,
         bubbles: true,
         cancelable: true,
-        currentTarget: object,
+        currentTarget: element,
         relatedTarget: null,
         timeStamp: +new Date(),
         preventDefault: preventDefault,
@@ -277,7 +276,6 @@ NW.Event = function() {
       // execute the bubbling phase
       result && (result = propagatePhase(target, event.type, false));
       // submit/reset events relayed to parent forms
-      // eg. a return key is typed in an input field
       if (target.form) { target = target.form; }
       // execute existing native method if not overwritten by html
       result && /^\s*function\s+/.test(target[event.type] + '') && target[event.type]();
@@ -286,11 +284,11 @@ NW.Event = function() {
 
   // propagate event capturing or bubbling phase
   propagatePhase =
-    function(object, type, capture) {
+    function(element, type, capture) {
       var i, l,
         result = true,
-        node = object, ancestors = [],
-        event = synthesize(object, type, capture);
+        node = element, ancestors = [],
+        event = synthesize(element, type, capture);
       // add synthetic flag
       event.propagated=true;
       // collect ancestors
@@ -380,15 +378,15 @@ NW.Event = function() {
 
   // enable event propagation
   enablePropagation =
-    function(object) {
-      var win = getContext(object), doc = win.document;
+    function(element) {
+      var win = getContext(element), doc = win.document;
       if (!forcedPropagation) {
         forcedPropagation = true;
         // deregistration on page unload
         NW.Event.appendHandler(win, 'beforeunload',
           function(event) {
             NW.Event.removeHandler(win, 'beforeunload', arguments.callee, false);
-            disablePropagation(object);
+            disablePropagation(element);
           },false
         );
         // register capturing keydown and mousedown event handlers
@@ -408,8 +406,8 @@ NW.Event = function() {
 
   // disable event propagation
   disablePropagation =
-    function(object) {
-      var win = getContext(object), doc = win.document;
+    function(element) {
+      var win = getContext(element), doc = win.document;
       if (forcedPropagation) {
         forcedPropagation = false;
         // deregister capturing keydown and mousedown event handlers
@@ -457,19 +455,19 @@ NW.Event = function() {
 
     // programatically dispatch native or custom events
     dispatch:
-      function(object, type, capture) {
-        var event, result, win = getContext(object), doc = win.document;
-        if (object.fireEvent) {
+      function(element, type, capture) {
+        var event, result, win = getContext(element), doc = win.document;
+        if (element.fireEvent) {
           // IE event model
           event = doc.createEventObject();
           event.type = type;
-          event.target = object;
+          event.target = element;
           event.eventPhase = 0;
-          event.currentTarget = object;
+          event.currentTarget = element;
           event.cancelBubble= !!capture;
           event.returnValue= undefined;
-          // dispatch event type to object
-          result = object.fireEvent('on' + type, fixEvent(object, event, capture));
+          // dispatch event type to element
+          result = element.fireEvent('on' + type, fixEvent(element, event, capture));
         } else {
           // W3C event model
           if (/mouse|click/.test(type)) {
@@ -482,47 +480,47 @@ NW.Event = function() {
             event = doc.createEvent('HTMLEvents');
             event.initEvent(type, true, true);
           }
-          // dispatch event type to object
-          result = object.dispatchEvent(event);
+          // dispatch event type to element
+          result = element.dispatchEvent(event);
         }
         return result;
       },
 
     // append an event handler
     appendHandler:
-      function(object, type, handler, capture) {
+      function(element, type, handler, capture) {
         var key;
         Handlers[type] || (Handlers[type] = {
-          objects: [],
+          elements: [],
           funcs: [],
           parms: [],
           wraps: []
         });
         // if handler is not already registered
-        if ((key = isRegistered(Handlers[type], object, type, handler, capture || false)) === false) {
+        if ((key = isRegistered(Handlers[type], element, type, handler, capture || false)) === false) {
           // append handler to the chain
-          Handlers[type].objects.push(object);
+          Handlers[type].elements.push(element);
           Handlers[type].funcs.push(handler);
           Handlers[type].parms.push(capture);
-          if (object.addEventListener && NW.Event.EVENTS_W3C) {
+          if (element.addEventListener && NW.Event.EVENTS_W3C) {
             // use DOM2 event registration
-            object.addEventListener(type, handler, capture || false);
-          } else if (object.attachEvent && NW.Event.EVENTS_W3C) {
+            element.addEventListener(type, handler, capture || false);
+          } else if (element.attachEvent && NW.Event.EVENTS_W3C) {
             // append wrapper function to fix IE scope
             key = Handlers[type].wraps.push(
               function(event) {
-                return handler.call(object, fixEvent(object, event, capture));
+                return handler.call(element, fixEvent(element, event, capture));
               }
             );
             // use MSIE event registration
-            object.attachEvent('on' + type, Handlers[type].wraps[key - 1]);
+            element.attachEvent('on' + type, Handlers[type].wraps[key - 1]);
           } else {
             // if first handler for this event type
-            if (Handlers[type].objects.length == 0) {
+            if (Handlers[type].elements.length == 0) {
               // save previous handler if existing
-              if (typeof object['on' + type] == 'function') {
-                Handlers[type].objects.push(object);
-                Handlers[type].funcs.push(object['on' + type]);
+              if (typeof element['on' + type] == 'function') {
+                Handlers[type].elements.push(element);
+                Handlers[type].funcs.push(element['on' + type]);
                 Handlers[type].parms.push(capture);
               }
               // use DOM0 event registration
@@ -538,35 +536,35 @@ NW.Event = function() {
 
     // remove an event handler
     removeHandler:
-      function(object, type, handler, capture) {
+      function(element, type, handler, capture) {
         var key;
         // if handler is found to be registered
-        if ((key = isRegistered(Handlers[type], object, type, handler, capture || false)) !== false) {
+        if ((key = isRegistered(Handlers[type], element, type, handler, capture || false)) !== false) {
           // remove handler from the chain
-          Handlers[type].objects.splice(key, 1);
+          Handlers[type].elements.splice(key, 1);
           Handlers[type].funcs.splice(key, 1);
           Handlers[type].parms.splice(key, 1);
-          if (object.removeEventListener && NW.Event.EVENTS_W3C) {
+          if (element.removeEventListener && NW.Event.EVENTS_W3C) {
             // use DOM2 event deregistration
-            object.removeEventListener(type, handler, capture || false);
-          } else if (object.detachEvent && NW.Event.EVENTS_W3C) {
+            element.removeEventListener(type, handler, capture || false);
+          } else if (element.detachEvent && NW.Event.EVENTS_W3C) {
             // use MSIE event deregistration
-            object.detachEvent('on' + type, Handlers[type].wraps[key]);
+            element.detachEvent('on' + type, Handlers[type].wraps[key]);
             // remove wrapper function from the chain
             Handlers[type].wraps.splice(key, 1);
           } else {
             // if last handler for this event type
-            if (Handlers[type].objects.length == 1) {
+            if (Handlers[type].elements.length == 1) {
               // use DOM0 event deregistration
-              objects['on' + type] = Handlers[type].objects[0];
+              elements['on' + type] = Handlers[type].elements[0];
               // remove last handler from the chain
-              Handlers[type].objects.splice(0, 1);
+              Handlers[type].elements.splice(0, 1);
               Handlers[type].funcs.splice(0, 1);
               Handlers[type].parms.splice(0, 1);
             }
           }
           // if no more registered handlers of type
-          if (Handlers[type].objects.length == 0) {
+          if (Handlers[type].elements.length == 0) {
             // remove chain type from collection
             delete Handlers[type];
           }
@@ -576,25 +574,25 @@ NW.Event = function() {
 
     // append an event listener
     appendListener:
-      function(object, type, handler, capture) {
+      function(element, type, handler, capture) {
         var key;
         Listeners[type] || (Listeners[type] = {
-          objects: [],
+          elements: [],
           funcs: [],
           parms: [],
           wraps: []
         });
         // if listener is not already registered
-        if ((key = isRegistered(Listeners[type], object, type, handler, capture || false)) === false) {
+        if ((key = isRegistered(Listeners[type], element, type, handler, capture || false)) === false) {
           if (!forcedPropagation) {
-            enablePropagation(object);
+            enablePropagation(element);
           }
           // append listener to the chain
-          Listeners[type].objects.push(object);
+          Listeners[type].elements.push(element);
           Listeners[type].funcs.push(handler);
           Listeners[type].parms.push(capture);
-          if (getListeners(object, type, handler).length == 1) {
-            NW.Event.appendHandler(object, type, handleListeners, capture || false);
+          if (getListeners(element, type, handler).length == 1) {
+            NW.Event.appendHandler(element, type, handleListeners, capture || false);
           }
         }
         return this;
@@ -602,16 +600,16 @@ NW.Event = function() {
 
     // remove an event listener
     removeListener:
-      function(object, type, handler, capture) {
+      function(element, type, handler, capture) {
         var key;
         // if listener is found to be registered
-        if ((key = isRegistered(Listeners[type], object, type, handler, capture || false)) !== false) {
+        if ((key = isRegistered(Listeners[type], element, type, handler, capture || false)) !== false) {
           // remove listener from the chain
-          Listeners[type].objects.splice(key, 1);
+          Listeners[type].elements.splice(key, 1);
           Listeners[type].funcs.splice(key, 1);
           Listeners[type].parms.splice(key, 1);
-          if (Listeners[type].objects.length == 0) {
-            NW.Event.removeHandler(object, type, handleListeners, capture || false);
+          if (Listeners[type].elements.length == 0) {
+            NW.Event.removeHandler(element, type, handleListeners, capture || false);
             delete Listeners[type];
           }
         }
@@ -620,24 +618,24 @@ NW.Event = function() {
 
     // append an event delegate
     appendDelegate:
-      function(object, type, handler, delegate) {
+      function(element, type, handler, delegate) {
         var key;
         // if not user specified the delegated element
         // will default to root element (documentElement)
         delegate = delegate || document.documentElement;
         Delegates[type] || (Delegates[type] = {
-          objects: [],
+          elements: [],
           funcs: [],
           parms: []
         });
         // if delegate is not already registered
-        if ((key = isRegistered(Delegates[type], object, type, handler, delegate)) === false) {
+        if ((key = isRegistered(Delegates[type], element, type, handler, delegate)) === false) {
           // append delegate to the chain
-          Delegates[type].objects.push(object);
+          Delegates[type].elements.push(element);
           Delegates[type].funcs.push(handler);
           Delegates[type].parms.push(delegate);
           // if first delegate for this event type
-          if (Delegates[type].objects.length == 1) {
+          if (Delegates[type].elements.length == 1) {
             // append the real event lisyener for this chain
             NW.Event.appendListener(delegate, type, handleDelegates, true);
           }
@@ -647,19 +645,19 @@ NW.Event = function() {
 
     // remove an event delegate
     removeDelegate:
-      function(object, type, handler, delegate) {
+      function(element, type, handler, delegate) {
         var key;
         // if not user specified the delegated element
         // will default to root element (documentElement)
         delegate = delegate || document.documentElement;
         // if delegate is found to be registered
-        if ((key = isRegistered(Delegates[type], object, type, handler, delegate)) !== false) {
+        if ((key = isRegistered(Delegates[type], element, type, handler, delegate)) !== false) {
           // remove delegate from the chain
-          Delegates[type].objects.splice(key, 1);
+          Delegates[type].elements.splice(key, 1);
           Delegates[type].funcs.splice(key, 1);
           Delegates[type].parms.splice(key, 1);
           // if last delegate for this event type
-          if (Delegates[type].objects.length == 0) {
+          if (Delegates[type].elements.length == 0) {
             delete Delegates[type];
             // remove the real event listener for this chain
             NW.Event.removeListener(delegate, type, handleDelegates, true);
@@ -667,6 +665,7 @@ NW.Event = function() {
         }
         return this;
       }
+
   };
 
 }();
