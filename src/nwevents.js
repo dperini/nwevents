@@ -5,9 +5,9 @@
  * nwevents.js - Javascript Event Manager
  *
  * Author: Diego Perini <diego.perini at gmail com>
- * Version: 1.12
+ * Version: 1.2.0beta
  * Created: 20051016
- * Release: 20080824
+ * Release: 20080907
  *
  * License:
  *  http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -19,7 +19,7 @@ window.NW || (window.NW = {});
 
 NW.Event = function() {
 
-  var version = '1.12',
+  var version = '1.2.0beta',
 
   // event collections
   Handlers = {},
@@ -38,9 +38,6 @@ NW.Event = function() {
     'className': /\.([^#]+)/,
     'all': /^[\.\-\#\w\*]+$/
   },
-
-  // synthetic propagation status
-  forcedPropagation = false,
 
   // use feature detection, currently FF3, Opera and IE
   hasActive = typeof document.activeElement != 'undefined',
@@ -80,7 +77,7 @@ NW.Event = function() {
       this.cancelBubble = true;
     },
 
-  // get context for element
+  // get context window for element
   getContext =
     function(element) {
       return (element.ownerDocument || element.document || element).parentWindow || window;
@@ -118,17 +115,14 @@ NW.Event = function() {
   // handle listeners chain for event type
   handleListeners =
     function(event) {
-      var i, l, elements, funcs, parms,
-        result = true, type = event.type;
-      if (forcedPropagation) {
-        if ("|focus|blur|change|reset|submit|".indexOf(event.type) > -1 && !event.propagated) {
-          if (event.preventDefault) {
-            event.preventDefault();
-          } else {
-            event.returnValue = false;
-          }
-          return false;
+      var i, l, elements, funcs, parms, result = true, type = event.type;
+      if (!event.propagated && "|focus|blur|change|reset|submit|".indexOf(event.type) > -1) {
+        if (event.preventDefault) {
+          event.preventDefault();
+        } else {
+          event.returnValue = false;
         }
+        return false;
       }
       if (Listeners[type] && Listeners[type].elements) {
         // make a copy of the Listeners[type] array
@@ -178,7 +172,7 @@ NW.Event = function() {
         for (i = 0, l = elements.length; l > i; i++) {
           // if event.target matches one of the registered elements and
           // if "this" element matches one of the registered delegates
-          if (match(event.target, elements[i]) && parms[i] === this) {
+          if (parms[i] === this && NW.Dom.match(event.target, elements[i])) {
             // execute registered function in element scope
             if (funcs[i].call(event.target, event) === false) {
               result = false;
@@ -188,62 +182,6 @@ NW.Event = function() {
         }
       }
       return result;
-    },
-
-  // use a simple selector match or a full
-  // CSS3 selector engine if it is available
-  match =
-    function(element, selector) {
-      var j, id, tagName, className, match, matched = false;
-      if (typeof selector == 'string') {
-        if (NW.Dom && typeof NW.Dom.match == 'function') {
-          // use nwmatcher as full CSS3 selector engine
-          if (NW.Dom.match(element, selector)) {
-            matched = true;
-          }
-        } else if (selector.match(Patterns.all)) {
-          // use a simple selector match (id, tag, class)
-          match = selector.match(Patterns.tagName);
-          tagName = match ? match[1] : '*';
-          match = selector.match(Patterns.id);
-          id = match ? match[1] : null;
-          match = selector.match(Patterns.className);
-          className = match ? match[1] : null;
-          if ((!id || id == element.id) &&
-            (!tagName || tagName == '*' || tagName == element.nodeName.toLowerCase()) &&
-            (!className || (' ' + element.className + ' ').replace(/\s\s+/g,' ').indexOf(' ' + className + ' ') > -1)) {
-            matched = true;
-          }
-        }
-      } else {
-        // a selector matcher element
-        if (typeof selector == 'element') {
-          // match on property/values
-          for (j in selector) {
-            if (j == 'className') {
-              // handle special className matching
-              if ((' ' + element.className + ' ').replace(/\s\s+/g,' ').indexOf(' ' + selector[j] + ' ') > -1) {
-                matched = true;
-                break;
-              }
-            } else if (j == 'nodeName' || j == 'tagName') {
-              // handle upper/lower case tagName
-              if (element.nodeName.toLowerCase() == selector[j].toLowerCase()) {
-                matched = true;
-                break;
-              }
-            } else {
-              // handle matching other properties
-              if (element[j] === selector[j]) {
-                matched = true;
-                break;
-              }
-            }
-          }
-        }
-      }
-      // return boolean true/false
-      return matched;
     },
 
   // create a synthetic event
@@ -344,19 +282,19 @@ NW.Event = function() {
   // propagate form action events
   propagateFormAction =
     function(event) {
-      var target = event.target, type = target.type, context = getContext(target).document;
+      var target = event.target, type = target.type, doc = getContext(target).document;
       // handle activeElement on context document
-      if (target != context.activeElement) {
+      if (target != doc.activeElement) {
         if ((!hasActive || window.opera) && target.nodeType == 1) {
-          context.activeElement = target;
-          context.focusElement = null;
+          doc.activeElement = target;
+          doc.focusElement = null;
         }
       }
       if (type) {
         // handle focusElement on context document
-        if (target != context.focusElement) {
+        if (target != doc.focusElement) {
           if ((!hasActive || window.opera)) {
-            context.focusElement = target;
+            doc.focusElement = target;
           }
         }
         if (/file|text|password/.test(type) && event.keyCode == 13) {
@@ -378,15 +316,15 @@ NW.Event = function() {
 
   // enable event propagation
   enablePropagation =
-    function(element) {
-      var win = getContext(element), doc = win.document;
-      if (!forcedPropagation) {
-        forcedPropagation = true;
+    function(win) {
+      var doc = win.document;
+      if (!doc.forcedPropagation) {
+        doc.forcedPropagation = true;
         // deregistration on page unload
         NW.Event.appendHandler(win, 'beforeunload',
           function(event) {
             NW.Event.removeHandler(win, 'beforeunload', arguments.callee, false);
-            disablePropagation(element);
+            disablePropagation(win);
           },false
         );
         // register capturing keydown and mousedown event handlers
@@ -406,10 +344,10 @@ NW.Event = function() {
 
   // disable event propagation
   disablePropagation =
-    function(element) {
-      var win = getContext(element), doc = win.document;
-      if (forcedPropagation) {
-        forcedPropagation = false;
+    function(win) {
+      var doc = win.document;
+      if (doc.forcedPropagation) {
+        doc.forcedPropagation = false;
         // deregister capturing keydown and mousedown event handlers
         NW.Event.removeHandler(doc, 'keydown', propagateFormAction, true);
         NW.Event.removeHandler(doc, 'mousedown', propagateFormAction, true);
@@ -575,7 +513,7 @@ NW.Event = function() {
     // append an event listener
     appendListener:
       function(element, type, handler, capture) {
-        var key;
+        var key, win = getContext(element);
         Listeners[type] || (Listeners[type] = {
           elements: [],
           funcs: [],
@@ -584,8 +522,8 @@ NW.Event = function() {
         });
         // if listener is not already registered
         if ((key = isRegistered(Listeners[type], element, type, handler, capture || false)) === false) {
-          if (!forcedPropagation) {
-            enablePropagation(element);
+          if (!win.document.forcedPropagation) {
+            enablePropagation(win);
           }
           // append listener to the chain
           Listeners[type].elements.push(element);
@@ -622,7 +560,7 @@ NW.Event = function() {
         var key;
         // if not user specified the delegated element
         // will default to root element (documentElement)
-        delegate = delegate || document.documentElement;
+        delegate = delegate || getContext(element).document.documentElement;
         Delegates[type] || (Delegates[type] = {
           elements: [],
           funcs: [],
@@ -649,7 +587,7 @@ NW.Event = function() {
         var key;
         // if not user specified the delegated element
         // will default to root element (documentElement)
-        delegate = delegate || document.documentElement;
+        delegate = delegate || getContext(element).document.documentElement;
         // if delegate is found to be registered
         if ((key = isRegistered(Delegates[type], element, type, handler, delegate)) !== false) {
           // remove delegate from the chain
@@ -664,6 +602,87 @@ NW.Event = function() {
           }
         }
         return this;
+      }
+
+  };
+
+}();
+
+// the embedded NW.Dom.match() method to have basic event delegation working,
+// overwritten if loading the more capable nwmatcher.js CSS3 selector engine
+NW.Dom = function() {
+
+  var Patterns = {
+    id: /#([^\.]+)/,
+    tagName: /^([^#\.]+)/,
+    className: /\.([^#]+)/,
+    all: /^[\.\-\#\w]+$/
+  };
+
+  return {
+    // use a simple selector match or a full
+    // CSS3 selector engine if it is available
+    match:
+      function(element, selector) {
+        var j, id, doc, length, results, tagName, className, match, matched = false;
+        doc = (element.ownerDocument || element.document || element);
+        if (typeof selector == 'string') {
+          if (typeof doc.querySelectorAll != 'undefined') {
+            try {
+              results = doc.querySelectorAll(selector);
+            } catch(e) {
+              results = [];
+            }
+            length = results.length;
+            while (length--) {
+              if (results[length] === element) {
+                matched = true;
+                break;
+              }
+            }
+          } else if (selector.match(Patterns.all)) {
+            // use a simple selector match (id, tag, class)
+            match = selector.match(Patterns.tagName);
+            tagName = match ? match[1] : '*';
+            match = selector.match(Patterns.id);
+            id = match ? match[1] : null;
+            match = selector.match(Patterns.className);
+            className = match ? match[1] : null;
+            if ((!id || id == element.id) &&
+              (!tagName || tagName == '*' || tagName == element.nodeName.toLowerCase()) &&
+              (!className || (' ' + element.className + ' ').replace(/\s\s+/g,' ').indexOf(' ' + className + ' ') > -1)) {
+              matched = true;
+            }
+          }
+        } else {
+          // a selector matcher element
+          if (typeof selector == 'element') {
+            // match on property/values
+            for (j in selector) {
+              if (j == 'className') {
+                // handle special className matching
+                if ((' ' + element.className + ' ').replace(/\s\s+/g,' ').indexOf(' ' + selector[j] + ' ') > -1) {
+                  matched = true;
+                  break;
+                }
+              } else if (j == 'nodeName' || j == 'tagName') {
+                // handle upper/lower case tagName
+                if (element.nodeName.toLowerCase() == selector[j].toLowerCase()) {
+                  matched = true;
+                  break;
+                }
+              } else {
+                // handle matching other properties
+                if (element[j] === selector[j]) {
+                  matched = true;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        // boolean true/false
+        return matched;
       }
 
   };
