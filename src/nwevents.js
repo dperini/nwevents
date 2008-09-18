@@ -554,22 +554,23 @@ NW.Event = function() {
         return this;
       },
 
+
     // append an event delegate
     appendDelegate:
-      function(element, type, handler, delegate) {
+      // with iframes pass a delegate parameter
+      function(selector, type, handler, delegate) {
         var key;
-        // if not user specified the delegated element
-        // will default to root element (documentElement)
-        delegate = delegate || getContext(element).document.documentElement;
+        // "delegate" defaults to documentElement
+        delegate = delegate || document.documentElement;
         Delegates[type] || (Delegates[type] = {
           elements: [],
           funcs: [],
           parms: []
         });
         // if delegate is not already registered
-        if ((key = isRegistered(Delegates[type], element, type, handler, delegate)) === false) {
+        if ((key = isRegistered(Delegates[type], selector, type, handler, delegate)) === false) {
           // append delegate to the chain
-          Delegates[type].elements.push(element);
+          Delegates[type].elements.push(selector);
           Delegates[type].funcs.push(handler);
           Delegates[type].parms.push(delegate);
           // if first delegate for this event type
@@ -583,13 +584,13 @@ NW.Event = function() {
 
     // remove an event delegate
     removeDelegate:
-      function(element, type, handler, delegate) {
+      // with iframes pass a delegate parameter
+      function(selector, type, handler, delegate) {
         var key;
-        // if not user specified the delegated element
-        // will default to root element (documentElement)
-        delegate = delegate || getContext(element).document.documentElement;
+        // "delegate" defaults to documentElement
+        delegate = delegate || document.documentElement;
         // if delegate is found to be registered
-        if ((key = isRegistered(Delegates[type], element, type, handler, delegate)) !== false) {
+        if ((key = isRegistered(Delegates[type], selector, type, handler, delegate)) !== false) {
           // remove delegate from the chain
           Delegates[type].elements.splice(key, 1);
           Delegates[type].funcs.splice(key, 1);
@@ -608,8 +609,8 @@ NW.Event = function() {
 
 }();
 
-// the embedded NW.Dom.match() method to have basic event delegation working,
-// overwritten if loading the more capable nwmatcher.js CSS3 selector engine
+// embedded NW.Dom.match() so basic event delegation works,
+// overwritten if loading the nwmatcher.js selector engine
 NW.Dom = function() {
 
   var Patterns = {
