@@ -7,7 +7,7 @@
  * Author: Diego Perini <diego.perini at gmail com>
  * Version: 1.2.0beta
  * Created: 20051016
- * Release: 20080907
+ * Release: 20080916
  *
  * License:
  *  http://javascript.nwbox.com/NWEvents/MIT-LICENSE
