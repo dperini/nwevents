@@ -7,7 +7,7 @@
  * Author: Diego Perini <diego.perini at gmail com>
  * Version: 1.2.1beta
  * Created: 20051016
- * Release: 20090117
+ * Release: 20090219
  *
  * License:
  *  http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -731,7 +731,7 @@ NW.Dom = function() {
     match:
       function(element, selector) {
         var d, j, id, length, results, tagName, className, match, matched = false;
-        d = getDocument(element);
+        d = element.ownerDocument || element;
         if (typeof selector == 'string') {
           if (typeof d.querySelectorAll != 'undefined') {
             try {
