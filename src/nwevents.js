@@ -5,9 +5,9 @@
  * nwevents.js - Javascript Event Manager
  *
  * Author: Diego Perini <diego.perini at gmail com>
- * Version: 1.2.1
+ * Version: 1.2.2
  * Created: 20051016
- * Release: 20090304
+ * Release: 20090315
  *
  * License:
  *  http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -19,7 +19,7 @@ window.NW || (window.NW = {});
 
 NW.Event = function() {
 
-  var version = 'nwevents-1.2.1',
+  var version = 'nwevents-1.2.2',
 
   // default setting
   EVENTS_W3C = true,
@@ -53,19 +53,18 @@ NW.Event = function() {
   // get window of document
   getWindow = 'parentWindow' in top.document ?
     function(d) {
-      return d.parentWindow || d;
+      return d.parentWindow || window;
     } : 'defaultView' in top.document && top === top.document.defaultView ?
     function(d) {
-      return d.defaultView || d;
+      return d.defaultView || window;
     } :
     function(d) {
       // fix for older Safari 2.0.x returning
-      // [Abstract View] instead of [window]
-      var i;
+      // [object AbstractView] instead of [window]
       if (window.frames.length === 0 && top.document === d) {
         return top;
       } else {
-        for (i in top.frames) {
+        for (var i in top.frames) {
           if (top.frames[i].document === d) {
             return top.frames[i];
           }
@@ -143,6 +142,26 @@ NW.Event = function() {
         }
       }
       return found;
+    },
+
+  // list event handlers bound to
+  // a given object for each type
+  getRegistered =
+    function(object, type, register) {
+      var i, j, l, results = [ ];
+      type || (type = '*');
+      object || (object = '*');
+      register || (register = Listeners);
+      for (i in register) {
+        if (type.indexOf(i) > -1 || type == '*') {
+          for (j = 0, l = register[i].items.length; j < l; j++) {
+            if (register[i].items[j] === object || object == '*') {
+              results.push(register[i].calls[j]);
+            }
+          }
+        }
+      }
+      return results;
     },
 
   // handle listeners chain for event type
@@ -347,7 +366,7 @@ NW.Event = function() {
         types = type.split(' ');
         for (i = 0, l = types.length; i < l; i++) {
           if (appendItem(Listeners, element, types[i], handler, capture) === false) {
-            if (Listeners[types[i]].items.length === 1) {
+            if (getRegistered(element, type, Listeners).length === 1) {
               appendHandler(element, types[i], handleListeners, capture);
             }
           }
@@ -369,7 +388,7 @@ NW.Event = function() {
         types = type.split(' ');
         for (i = 0, l = types.length; i < l; i++) {
           if (removeItem(Listeners, element, types[i], handler, capture) !== false) {
-            if (!Listeners[types[i]]) {
+            if (getRegistered(element, type, Listeners).length === 0) {
               removeHandler(element, types[i], handleListeners, capture);
             }
           }
@@ -693,6 +712,8 @@ NW.Event = function() {
     stop: stop,
 
     dispatch: dispatch,
+
+    getRegistered: getRegistered,
 
     appendHandler: appendHandler,
 
