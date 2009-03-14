@@ -44,13 +44,13 @@ NW.Event = function() {
       }
     }) : true,
 
-  // get document of element
+  // get document from element
   getDocument =
     function(e) {
       return e.ownerDocument || e.document || e;
     },
 
-  // get window of document
+  // get window from document
   getWindow = 'parentWindow' in top.document ?
     function(d) {
       return d.parentWindow || window;
