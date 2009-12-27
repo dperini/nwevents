@@ -366,7 +366,7 @@ NW.Event = (function(global) {
         types = type.split(' ');
         for (i = 0, l = types.length; i < l; i++) {
           if (appendItem(Listeners, element, types[i], handler, capture) === false) {
-            if (getRegistered(element, type, Listeners).length === 1) {
+            if (getRegistered(element, types[i], Listeners).length === 1) {
               appendHandler(element, types[i], handleListeners, capture);
             }
           }
@@ -388,7 +388,7 @@ NW.Event = (function(global) {
         types = type.split(' ');
         for (i = 0, l = types.length; i < l; i++) {
           if (removeItem(Listeners, element, types[i], handler, capture) !== false) {
-            if (getRegistered(element, type, Listeners).length === 0) {
+            if (getRegistered(element, types[i], Listeners).length === 0) {
               removeHandler(element, types[i], handleListeners, capture);
             }
           }
@@ -423,7 +423,7 @@ NW.Event = (function(global) {
         for (i in selector) {
           if (typeof i == 'string') {
             for (j in selector[i]) {
-              appendDelegate(i,j,selector[i][j]);
+              appendDelegate(i, j, selector[i][j]);
             }
           }
         }
@@ -441,9 +441,9 @@ NW.Event = (function(global) {
         types = type.split(' ');
         delegate = delegate || root;
         for (i = 0, l = types.length; i < l; i++) {
-          if (removeItem(Delegates, selector, type, handler, delegate) !== false) {
-            if (!Delegates[type]) {
-              removeListener(delegate, type, handleDelegates, true);
+          if (removeItem(Delegates, selector, types[i], handler, delegate) !== false) {
+            if (!Delegates[types[i]]) {
+              removeListener(delegate, types[i], handleDelegates, true);
             }
           }
         }
@@ -452,7 +452,7 @@ NW.Event = (function(global) {
         for (i in selector) {
           if (typeof i == 'string') {
             for (j in selector[i]) {
-              removeDelegate(i,j,selector[i][j]);
+              removeDelegate(i, j, selector[i][j]);
             }
           }
         }
