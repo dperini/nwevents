@@ -33,6 +33,16 @@ NW.Event = (function(global) {
   // initial script load context
   viewport = global, context = global.document, root = context.documentElement,
 
+  EventCollection =
+    function() {
+      return {
+        items: [],
+        calls: [],
+        parms: [],
+        wraps: []
+      };
+    },
+
   // use capability detection, currently FF3, Opera and IE
   hasActive = 'activeElement' in context ?
     (function() {
@@ -233,37 +243,23 @@ NW.Event = (function(global) {
   // used by handlers, listeners, delegates
   appendItem =
     function(registry, element, type, handler, capture) {
-      // registry is a reference to one of Handler, Listeners or Delegates collections
-      registry[type] || (registry[type] = { items: [], calls: [], parms: [], wraps: [] });
-      var key = isRegistered(registry, element, type, handler, capture);
-      // if handler not registered
-      if (key === false) {
-        // append handler to the registry
-        registry[type].items.push(element);
-        registry[type].calls.push(handler);
-        registry[type].parms.push(capture);
-      }
-      return key;
+      // registry is a reference to an EventCollection,
+      // actually supported Handler, Listeners, Delegates
+      registry[type] || (registry[type] = new EventCollection);
+      // append handler to the registry
+      registry[type].items.push(element);
+      registry[type].calls.push(handler);
+      registry[type].parms.push(capture);
     },
 
   // remove element handler from the registry
   // used by handlers, listeners, delegates
   removeItem =
-    function(registry, element, type, handler, capture) {
-      var key = isRegistered(registry, element, type, handler, capture);
-      // if server is registered
-      if (key !== false) {
-        // remove handler from the chain
-        registry[type].items.splice(key, 1);
-        registry[type].calls.splice(key, 1);
-        registry[type].parms.splice(key, 1);
-        // if no more registered handlers
-        if (registry[type].items.length === 0) {
-          // remove empty registry type
-          delete registry[type];
-        }
-      }
-      return key;
+    function(registry, type, key) {
+      // remove handler from the registry
+      registry[type].items.splice(key, 1);
+      registry[type].calls.splice(key, 1);
+      registry[type].parms.splice(key, 1);
     },
 
   // lazy definition for addEventListener / attachEvent
@@ -274,11 +270,9 @@ NW.Event = (function(global) {
     } : window.attachEvent && EVENTS_W3C ?
     function(element, type, handler, capture) {
       // use MSIE event registration
-      var key = Handlers[type].wraps.push(
-        function(event) {
-          return handler.call(element, fixEvent(element, event, capture));
-        }
-      );
+      var key = Handlers[type].wraps.push(function(event) {
+        return handler.call(element, fixEvent(element, event, capture));
+      });
       element.attachEvent('on' + type, Handlers[type].wraps[key - 1]);
     } :
     function(element, type, handler, capture) {
@@ -301,13 +295,10 @@ NW.Event = (function(global) {
       // use DOM2 event registration
       element.removeEventListener(type, handler, capture || false);
     } : window.detachEvent && EVENTS_W3C ?
-    function(element, type, handler, capture) {
+    function(element, type, handler, capture, key) {
       // use MSIE event registration
-      var key = isRegistered(Handlers, element, type, handler, capture);
-      if (key !== false) {
-        element.detachEvent('on' + type, Handlers[type].wraps[key]);
-        Handlers[type].wraps.splice(key, 1);
-      }
+      element.detachEvent('on' + type, handler);
+      Handlers[type].wraps.splice(key, 1);
     } :
     function(element, type, handler, capture) {
       // use DOM0 event registration
@@ -318,11 +309,13 @@ NW.Event = (function(global) {
   // append an event handler
   appendHandler =
     function(element, type, handler, capture) {
-      var i, l, types;
+      var i, k, l, types;
       if (typeof type == 'string') {
         types = type.split(' ');
         for (i = 0, l = types.length; i < l; i++) {
-          if (appendItem(Handlers, element, types[i], handler, capture) === false) {
+          k = isRegistered(Handlers, element, types[i], handler, capture);
+          if (k === false) {
+            appendItem(Handlers, element, types[i], handler, capture);
             appendEvent(element, types[i], handler, capture);
           }
         }
@@ -338,12 +331,14 @@ NW.Event = (function(global) {
   // remove an event handler
   removeHandler =
     function(element, type, handler, capture) {
-      var i, l, types;
+      var i, k, l, types;
       if (typeof type == 'string') {
         types = type.split(' ');
         for (i = 0, l = types.length; i < l; i++) {
-          if (removeItem(Handlers, element, types[i], handler, capture) !== false) {
-            removeEvent(element, types[i], handler, capture);
+          k = isRegistered(Handlers, element, types[i], handler, capture);
+          if (k !== false) {
+            removeEvent(element, types[i], Handlers[types[i]].wraps[k], capture, k);
+            removeItem(Handlers, types[i], k);
           }
         }
       } else {
@@ -358,11 +353,13 @@ NW.Event = (function(global) {
   // append an event listener
   appendListener =
     function(element, type, handler, capture) {
-      var i, l, types;
+      var i, k, l, types;
       if (typeof type == 'string') {
         types = type.split(' ');
         for (i = 0, l = types.length; i < l; i++) {
-          if (appendItem(Listeners, element, types[i], handler, capture) === false) {
+          k = isRegistered(Listeners, element, types[i], handler, capture);
+          if (k === false) {
+            appendItem(Listeners, element, types[i], handler, capture);
             if (getRegistered(element, types[i], Listeners).length === 1) {
               appendHandler(element, types[i], handleListeners, capture);
             }
@@ -380,14 +377,16 @@ NW.Event = (function(global) {
   // remove an event listener
   removeListener =
     function(element, type, handler, capture) {
-      var i, l, types;
+      var i, k, l, types;
       if (typeof type == 'string') {
         types = type.split(' ');
         for (i = 0, l = types.length; i < l; i++) {
-          if (removeItem(Listeners, element, types[i], handler, capture) !== false) {
-            if (getRegistered(element, types[i], Listeners).length === 0) {
+          k = isRegistered(Listeners, element, types[i], handler, capture);
+          if (k !== false) {
+            if (getRegistered(element, types[i], Listeners).length === 1) {
               removeHandler(element, types[i], handleListeners, capture);
             }
+            removeItem(Listeners, types[i], k);
           }
         }
       } else {
@@ -404,12 +403,14 @@ NW.Event = (function(global) {
     // with iframes pass a delegate parameter
     // "delegate" defaults to documentElement
     function(selector, type, handler, delegate) {
-      var i, j, l, types;
+      var i, j, k, l, types;
       if (typeof selector == 'string') {
         types = type.split(' ');
         delegate = delegate || root;
         for (i = 0, l = types.length; i < l; i++) {
-          if (appendItem(Delegates, selector, types[i], handler, delegate) === false) {
+          k = isRegistered(Delegates, selector, types[i], handler, delegate);
+          if (k === false) {
+            appendItem(Delegates, selector, types[i], handler, delegate);
             if (Delegates[types[i]].items.length === 1) {
               appendListener(delegate, types[i], handleDelegates, true);
             }
@@ -433,15 +434,17 @@ NW.Event = (function(global) {
     // with iframes pass a delegate parameter
     // "delegate" defaults to documentElement
     function(selector, type, handler, delegate) {
-      var i, j, l, types;
+      var i, j, k, l, types;
       if (typeof type == 'string') {
         types = type.split(' ');
         delegate = delegate || root;
         for (i = 0, l = types.length; i < l; i++) {
-          if (removeItem(Delegates, selector, types[i], handler, delegate) !== false) {
-            if (!Delegates[types[i]]) {
+          k = isRegistered(Delegates, selector, types[i], handler, delegate);
+          if (k !== false) {
+            if (Delegates[types[i]].items.length === 1) {
               removeListener(delegate, types[i], handleDelegates, true);
             }
+            removeItem(Delegates, types[i], k);
           }
         }
       } else {
@@ -566,8 +569,6 @@ NW.Event = (function(global) {
   propagate =
     function(event) {
       var result = true, target = event.target, type = event.type;
-      // remove the trampoline event
-      removeHandler(target, event.type, arguments.callee, false);
       // execute the capturing phase
       result && (result = propagatePhase(target, type, true));
       // execute the bubbling phase
@@ -710,6 +711,8 @@ NW.Event = (function(global) {
     // for event listeners (DOM0 / DOM2)
     EVENTS_W3C: EVENTS_W3C,
 
+    // exposed event methods
+
     stop: stop,
 
     dispatch: dispatch,
@@ -727,6 +730,8 @@ NW.Event = (function(global) {
     appendDelegate: appendDelegate,
 
     removeDelegate: removeDelegate,
+
+    // helpers and debugging functions
 
     enablePropagation: enablePropagation,
 
