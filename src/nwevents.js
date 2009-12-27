@@ -17,7 +17,7 @@
 
 window.NW || (window.NW = {});
 
-NW.Event = function() {
+NW.Event = (function(global) {
 
   var version = 'nwevents-1.2.3beta',
 
@@ -31,7 +31,7 @@ NW.Event = function() {
   Handlers = {}, Delegates = {}, Listeners = {}, Previous = {},
 
   // initial script load context
-  viewport = this, context = this.document, root = context.documentElement,
+  viewport = global, context = global.document, root = context.documentElement,
 
   // use capability detection, currently FF3, Opera and IE
   hasActive = 'activeElement' in context ?
@@ -733,11 +733,11 @@ NW.Event = function() {
 
   };
 
-}();
+})(this);
 
 // embedded NW.Dom.match() so basic event delegation works,
 // overwritten if loading the nwmatcher.js selector engine
-NW.Dom = function() {
+NW.Dom = (function(global) {
 
   var Patterns = {
     'id': /#([^\.]+)/,
@@ -815,4 +815,4 @@ NW.Dom = function() {
 
   };
 
-}();
+})(this);
