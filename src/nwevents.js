@@ -27,8 +27,8 @@ NW.Event = (function(global) {
   // event phases constants
   CAPTURING_PHASE = 1, AT_TARGET = 2, BUBBLING_PHASE = 3,
 
-  // event collections and Previous DOM0 register
-  Handlers = {}, Delegates = {}, Listeners = {}, Previous = {},
+  // event collections and predefined DOM0 register
+  Handlers = { }, Delegates = { }, Listeners = { }, Predefined = { },
 
   // initial script load context
   viewport = global, context = global.document, root = context.documentElement,
@@ -289,15 +289,13 @@ NW.Event = (function(global) {
       element.attachEvent('on' + type, Handlers[type].wraps[key - 1]);
     } :
     function(element, type, handler, capture) {
-      Previous['on' + type] = element['on' + type] || new Function();
+      Predefined['on' + type] = element['on' + type] || new Function();
       // use DOM0 event registration
       element['on' + type] = function(event) {
-        var previous, result;
+        var result;
         event || (event = fixEvent(this, event, capture));
-        previous = Previous['on' + event.type];
         result = handler.call(this, event);
-        previous.call(this, event);
-        previous = null;
+        Predefined['on' + type].call(this, event);
         return result;
       };
     },
@@ -315,8 +313,8 @@ NW.Event = (function(global) {
     } :
     function(element, type, handler, capture) {
       // use DOM0 event registration
-      element['on' + type] = Previous['on' + type];
-      delete Previous['on' + type];
+      element['on' + type] = Predefined['on' + type];
+      delete Predefined['on' + type];
     },
 
   // append an event handler
