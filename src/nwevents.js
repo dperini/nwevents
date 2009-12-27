@@ -215,27 +215,40 @@ NW.Event = (function(global) {
   // handle delegates chain for event type
   handleDelegates =
     function(event) {
-      var i, l, items, calls, parms, result = true, type = event.type;
+      var i, l, 
+        items, calls, parms, target, 
+        result = true, type = event.type; 
+
       if (Delegates[type] && Delegates[type].items) {
+
         // make a copy of the Delegates[type] array
         // since it can be modified run time by the
         // events deleting themselves or adding new
         items = Delegates[type].items.slice();
         calls = Delegates[type].calls.slice();
         parms = Delegates[type].parms.slice();
+
         // process chain in fifo order
+        bubblingLoop:
         for (i = 0, l = items.length; l > i; i++) {
           // if event.target matches one of the registered elements and
           // if "this" element matches one of the registered delegates
-          if (parms[i] === this && NW.Dom.match(event.target, items[i])) {
-            // execute registered function in element scope
-            if (calls[i].call(event.target, event) === false) {
-              result = false;
-              break;
+          target = event.target;
+          // bubble events up to parent nodes
+          while (target && target != this) {
+            if (NW.Dom.match(target, items[i])) {
+              // execute registered function in element scope
+              if (calls[i].call(target, event) === false) {
+                result = false;
+                break bubblingLoop;
+              }
             }
+            target = target.parentNode;
           }
         }
+
       }
+
       return result;
     },
 
