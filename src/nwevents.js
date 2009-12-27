@@ -85,10 +85,8 @@ NW.Event = (function(global) {
       // add preventDefault and stopPropagation methods
       event.preventDefault = preventDefault;
       event.stopPropagation = stopPropagation;
-      // bound and fired element are the same AT-TARGET
-      event.eventPhase = capture &&
-        (event.target == element) ? CAPTURING_PHASE :
-        (event.target == element ? AT_TARGET : BUBBLING_PHASE);
+      // bound and fired element are the same AT_TARGET
+      event.eventPhase = capture ? CAPTURING_PHASE : BUBBLING_PHASE;
       // related element (routing of the event)
       event.relatedTarget =
         event[(event.target == event.fromElement ? 'to' : 'from') + 'Element'];
@@ -167,41 +165,40 @@ NW.Event = (function(global) {
   // handle listeners chain for event type
   handleListeners =
     function(event) {
-      var i, l, items, calls, parms, result = true, type = event.type;
-      if (!event.propagated && "|focus|blur|change|reset|submit|".indexOf(event.type) > -1) {
-        if (event.preventDefault) {
-          event.preventDefault();
-        } else {
-          event.returnValue = false;
-        }
-        return false;
-      }
+      var i, l, result = true,
+        items, calls, parms,
+        type = event.type;
+
       if (Listeners[type] && Listeners[type].items) {
+
+        if (!event.propagated) {
+          if (FormActivationEvents[type]) return true;
+        }
+
+        // only AT_TARGET event.target === event.currentTarget
+        if (event.eventPhase !== AT_TARGET && event.target === this) {
+          event.eventPhase = AT_TARGET;
+        }
+
         // make a copy of the Listeners[type] array
         // since it can be modified run time by the
         // events deleting themselves or adding new
         items = Listeners[type].items.slice();
         calls = Listeners[type].calls.slice();
         parms = Listeners[type].parms.slice();
+
         // process chain in fifo order
         for (i = 0, l = items.length; l > i; i++) {
-          // element match current target ?
-          if (items[i] === this &&
-            ((event.eventPhase == BUBBLING_PHASE && parms[i] === false) ||
-             (event.eventPhase == CAPTURING_PHASE && parms[i] === true) ||
-              !event.propagated)) {
-            // a synthetic event during the AT_TARGET phase ?
-            if (event.propagated && event.target === this) {
-              event.eventPhase = AT_TARGET;
-            }
-            // execute registered function in element scope
-            if (calls[i].call(this, event) === false) {
-              result = false;
-              break;
+          if (items[i] === this) {
+            if ((event.eventPhase == CAPTURING_PHASE ?
+              (parms[i] === true) : (parms[i] === false))) {
+              if ((result = calls[i].call(this, event)) === false) break;
             }
           }
         }
+
       }
+
       return result;
     },
 
@@ -535,6 +532,14 @@ NW.Event = (function(global) {
     'beforedeactivate': 'blur'
   },
 
+  FormActivationEvents = {
+    blur: 1,
+    focus: 1,
+    reset: 1,
+    submit: 1,
+    change: 1
+  },
+
   FormAction = 'keydown mousedown',
   Activation = context.addEventListener ?
     'focus blur' : 'beforeactivate beforedeactivate',
@@ -560,18 +565,16 @@ NW.Event = (function(global) {
   // ancestors path in both directions
   propagate =
     function(event) {
-      var result = true, target = event.target;
-      target['__' + event.type] = false;
+      var result = true, target = event.target, type = event.type;
       // remove the trampoline event
       removeHandler(target, event.type, arguments.callee, false);
       // execute the capturing phase
-      result && (result = propagatePhase(target, event.type, true));
+      result && (result = propagatePhase(target, type, true));
       // execute the bubbling phase
-      result && (result = propagatePhase(target, event.type, false));
-      // submit/reset events relayed to parent forms
-      if (target.form) { target = target.form; }
-      // execute existing native method if not overwritten by html
-      result && (/^\s*function\s+/).test(target[event.type] + '') && target[event.type]();
+      result && (result = propagatePhase(target, type, false));
+      // remove the trampoline event
+      removeHandler(target, type, propagate, false);
+      // return flag
       return result;
     },
 
@@ -655,10 +658,7 @@ NW.Event = (function(global) {
           // no extra processing is necessary
           return;
         }
-        if (target && !target['__' + type]) {
-          target['__' + type] = true;
-          appendHandler(target, type, propagate, false);
-        }
+        appendHandler(target, type, propagate, false);
       }
     },
 
@@ -699,6 +699,7 @@ NW.Event = (function(global) {
     context.activeElement = root;
   }
 
+  // initialize context propagation
   if (!context.forcedPropagation) {
     enablePropagation(context);
   }
