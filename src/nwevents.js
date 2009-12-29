@@ -21,8 +21,8 @@ NW.Event = (function(global) {
 
   var version = 'nwevents-1.2.3beta',
 
-  // default setting
-  EVENTS_W3C = true,
+  // default
+  USE_DOM2 = true,
 
   // event phases constants
   CAPTURING_PHASE = 1, AT_TARGET = 2, BUBBLING_PHASE = 3,
@@ -43,7 +43,10 @@ NW.Event = (function(global) {
       };
     },
 
-  // use capability detection, currently FF3, Opera and IE
+  /* ============================ FEATURE TESTING =========================== */
+
+  // detect activation capabilities,
+  // currently FF3, Opera and IE
   hasActive = 'activeElement' in context ?
     (function() {
       try {
@@ -62,6 +65,12 @@ NW.Event = (function(global) {
       return !!(m && typeof m != 'string' && s === (m + '').replace(r, ''));
     };
   })(),
+
+  // detect event model in use
+  W3C_MODEL = root.addEventListener && root.removeEventListener ? true : false,
+  MSIE_MODEL = root.attachEvent && root.detachEvent ? true : false,
+
+  /* ============================ UTILITY METHODS =========================== */
 
   // get document from element
   getDocument =
@@ -287,11 +296,11 @@ NW.Event = (function(global) {
     },
 
   // lazy definition for addEventListener / attachEvent
-  appendEvent = window.addEventListener && EVENTS_W3C ?
+  appendEvent = W3C_MODEL && USE_DOM2 ?
     function(element, type, handler, capture) {
       // use DOM2 event registration
       element.addEventListener(type, handler, capture || false);
-    } : window.attachEvent && EVENTS_W3C ?
+    } : MSIE_MODEL && USE_DOM2 ?
     function(element, type, handler, capture) {
       // use MSIE event registration
       var key = Handlers[type].wraps.push(function(event) {
@@ -312,11 +321,11 @@ NW.Event = (function(global) {
     },
 
   // lazy definition for removeEventListener / detachEvent
-  removeEvent = window.removeEventListener && EVENTS_W3C ?
+  removeEvent = W3C_MODEL && USE_DOM2 ?
     function(element, type, handler, capture) {
       // use DOM2 event registration
       element.removeEventListener(type, handler, capture || false);
-    } : window.detachEvent && EVENTS_W3C ?
+    } : MSIE_MODEL && USE_DOM2 ?
     function(element, type, handler, capture, key) {
       // use MSIE event registration
       element.detachEvent('on' + type, handler);
@@ -866,7 +875,7 @@ NW.Event = (function(global) {
 
     // controls the type of registration
     // for event listeners (DOM0 / DOM2)
-    EVENTS_W3C: EVENTS_W3C,
+    USE_DOM2: USE_DOM2,
 
     // exposed event methods
 
