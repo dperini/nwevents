@@ -54,6 +54,15 @@ NW.Event = (function(global) {
       }
     }) : true,
 
+  // detect native methods
+  isNative = (function() {
+    var s = (global.open + '').replace(/open/g, '');
+    return function(object, method) {
+      var m = object ? object[method] : false, r = new RegExp(method, 'g');
+      return !!(m && typeof m != 'string' && s === (m + '').replace(r, ''));
+    };
+  })(),
+
   // get document from element
   getDocument =
     function(e) {
@@ -181,8 +190,10 @@ NW.Event = (function(global) {
 
       if (Listeners[type] && Listeners[type].items) {
 
-        if (!event.propagated) {
-          if (FormActivationEvents[type]) return true;
+        if (!event.propagated && FormActivationEvents[type]) {
+          if (event.preventDefault) event.preventDefault();
+          else event.returnValue = false;
+          return true;
         }
 
         // only AT_TARGET event.target === event.currentTarget
@@ -586,6 +597,10 @@ NW.Event = (function(global) {
       result && (result = propagatePhase(target, type, false));
       // remove the trampoline event
       removeHandler(target, type, propagate, false);
+      // submit/reset events relayed to parent forms
+      if (target.form) { target = target.form; }
+      // execute existing native methods if not overwritten
+      result && isNative(target, type) && target[type]();
       // return flag
       return result;
     },
