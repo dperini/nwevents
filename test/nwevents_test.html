@@ -21,7 +21,7 @@ ul { margin: 0px; padding: 0px 32px; border: 3px double gray; }
 <script src="../src/nwevents.js" type="text/javascript" charset="utf-8"></script>
 
 <!-- provides the match() method for CSS3 selector delegation -->
-<script src="../src/nwmatcher.js" type="text/javascript" charset="utf-8"></script>
+<script src="lib/nwmatcher.js" type="text/javascript" charset="utf-8"></script>
 
 <!-- setup some delegation and api test (focus/blur/mouseover/mouseout/click) -->
 <script type="text/javascript" src="test.js"></script>
@@ -36,7 +36,7 @@ var D = document.documentElement;
 NW.Event.appendDelegate('td', 'click', test);
 NW.Event.appendDelegate('li', 'click', test);
 
-window.onload = function() {
+NW.Event.onDOMReady(window, function() {
 	var i=document.getElementsByTagName('input');                                                                 
 	var li=document.getElementsByTagName('li');                                                                   
 	var td=document.getElementsByTagName('td');                                                                   
@@ -49,7 +49,7 @@ window.onload = function() {
 
 	NW.Event.dispatch(li[0],'mouseover',true);                                                          
 	NW.Event.dispatch(li[li.length-1],'mouseover',true);                                                
-};
+});
 
 // test adding some click on td and li
 function test(e) {
@@ -99,7 +99,7 @@ some mouseover is dispatched programatically at "onload" to show this feature.</
 <div id="sample1">
 Alternate rows color<br />
 <ul>
-<li>TEST BLOCK</li>
+<li>TEST <b>BLOCK</b></li>
 <li>TEST BLOCK</li>
 <li>TEST BLOCK</li>
 <li>TEST BLOCK</li>
