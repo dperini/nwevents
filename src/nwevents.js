@@ -5,7 +5,7 @@
  * nwevents.js - Javascript Event Manager
  *
  * Author: Diego Perini <diego.perini at gmail com>
- * Version: 1.2.3beta
+ * Version: 1.2.3
  * Created: 20051016
  * Release: 20091231
  *
@@ -19,9 +19,9 @@ window.NW || (window.NW = {});
 
 NW.Event = (function(global) {
 
-  var version = 'nwevents-1.2.3beta',
+  var version = 'nwevents-1.2.3',
 
-  // default
+  // default to DOM2
   USE_DOM2 = true,
 
   // event phases constants
