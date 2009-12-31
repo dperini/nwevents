@@ -7,7 +7,7 @@
  * Author: Diego Perini <diego.perini at gmail com>
  * Version: 1.2.3beta
  * Created: 20051016
- * Release: 20091226
+ * Release: 20091231
  *
  * License:
  *  http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -194,10 +194,13 @@ NW.Event = (function(global) {
   handleListeners =
     function(event) {
       var i, l, result = true,
-        items, calls, parms,
-        type = event.type;
+        items, calls, parms, phase,
+        type = event.type, valid;
 
       if (Listeners[type] && Listeners[type].items) {
+
+        // cache eventPhase access
+        phase = event.eventPhase;
 
         if (!event.propagated && FormActivationEvents[type]) {
           if (event.preventDefault) event.preventDefault();
@@ -206,8 +209,8 @@ NW.Event = (function(global) {
         }
 
         // only AT_TARGET event.target === event.currentTarget
-        if (event.eventPhase !== AT_TARGET && event.target === this) {
-          event.eventPhase = AT_TARGET;
+        if (phase !== AT_TARGET && event.target === this) {
+          phase = event.eventPhase = AT_TARGET;
         }
 
         // make a copy of the Listeners[type] array
@@ -219,12 +222,28 @@ NW.Event = (function(global) {
 
         // process chain in fifo order
         for (i = 0, l = items.length; l > i; i++) {
+          valid = false;
           if (items[i] === this) {
-            if ((event.eventPhase == CAPTURING_PHASE ?
-              (parms[i] === true) : (parms[i] === false))) {
-              if ((result = calls[i].call(this, event)) === false) break;
+            switch (phase) {
+              case CAPTURING_PHASE:
+                if (!event.propagated || parms[i] === true) {
+                  valid = true;
+                }
+                break;
+              case BUBBLING_PHASE:
+                if (parms[i] === false) {
+                  valid = true;
+                }
+                break;
+              case AT_TARGET:
+                if (!event.propagated || parms[i] === true) {
+                  valid = true;
+                }
+              default:
+                break;
             }
           }
+          if (valid && (result = calls[i].call(this, event)) === false) break;
         }
 
       }
@@ -235,9 +254,9 @@ NW.Event = (function(global) {
   // handle delegates chain for event type
   handleDelegates =
     function(event) {
-      var i, l, 
-        items, calls, parms, target, 
-        result = true, type = event.type; 
+      var i, l,
+        items, calls, parms, target,
+        result = true, type = event.type;
 
       if (Delegates[type] && Delegates[type].items) {
 
