@@ -239,7 +239,10 @@ NW.Event = (function(global) {
                 if (!event.propagated || parms[i] === true) {
                   valid = true;
                 }
+                break;
+              // Safari load events have eventPhase == 0
               default:
+                valid = true;
                 break;
             }
           }
