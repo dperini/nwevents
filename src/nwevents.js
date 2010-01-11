@@ -5,9 +5,9 @@
  * nwevents.js - Javascript Event Manager
  *
  * Author: Diego Perini <diego.perini at gmail com>
- * Version: 1.2.3
+ * Version: 1.2.4beta
  * Created: 20051016
- * Release: 20091231
+ * Release: 20100111
  *
  * License:
  *  http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -19,7 +19,7 @@ window.NW || (window.NW = {});
 
 NW.Event = (function(global) {
 
-  var version = 'nwevents-1.2.3',
+  var version = 'nwevents-1.2.4beta',
 
   // default to DOM2
   USE_DOM2 = true,
@@ -806,11 +806,11 @@ NW.Event = (function(global) {
   contentLoaded =
     function(host, callback, scope) {
 
-      var done = false, size = 0,
-        document = host.document,
+      var d = host.document,
+        done = false, size = 0,
+        root = d.documentElement,
         W3Type = 'DOMContentLoaded',
-        MSType = 'onreadystatechange',
-        root = document.documentElement;
+        MSType = 'onreadystatechange';
 
       function init(event) {
         if (!done) {
@@ -820,49 +820,59 @@ NW.Event = (function(global) {
       }
 
       // W3C Event model
-      if (document.addEventListener) {
+      if (d.addEventListener) {
 
         // browsers having native DOMContentLoaded
         function DOMContentLoaded(event) {
-          document.removeEventListener(event.type, DOMContentLoaded, false);
+          d.removeEventListener(event.type, DOMContentLoaded, false);
           init(event);
         }
-        document.addEventListener(W3Type, DOMContentLoaded, false);
+        d.addEventListener(W3Type, DOMContentLoaded, false);
 
         // onload fall back for older browsers
         host.addEventListener('load', DOMContentLoaded, false);
 
       // MSIE Event model (all versions)
-      } else if (document.attachEvent) {
+      } else if (
+        isNative(d, 'createEventObject') &&
+        isNative(d, 'attachEvent') &&
+        isNative(d, 'detachEvent')) {
 
-        function IEContentLoaded(event) {
-          document.detachEvent(MSType, IEContentLoaded);
-          function poll() {
-            try {
-              // throws errors until after ondocumentready
-              root.doScroll('left');
-              size = root.outerHTML.length;
-              if (size * 1.03 < d.fileSize * 1) {
+        if (isNative(root, 'doScroll')) {
+
+          function IEContentLoaded(event) {
+            d.detachEvent(MSType, IEContentLoaded);
+            function poll() {
+              try {
+                // throws errors until after ondocumentready
+                root.doScroll('left');
+                size = root.outerHTML.length;
+                if (size * 1.03 < d.fileSize * 1) {
+                  return !done && setTimeout(poll, 50);
+                }
+              } catch (e) {
                 return !done && setTimeout(poll, 50);
               }
-            } catch (e) {
-              return !done && setTimeout(poll, 50);
+              init({ type: 'poll' });
+              return done;
             }
-            init({ type: 'poll' });
-            return done;
+            poll();
           }
-          poll();
+
+          // start polling after first readyStateChange event
+          d.attachEvent(MSType, IEContentLoaded);
+
         }
-        document.attachEvent(MSType, IEContentLoaded);
 
         function IEReadyState(event) {
-          if (document.readyState == 'complete') {
-            document.detachEvent(MSType, IEReadyState);
+          if (d.readyState == 'complete') {
+            d.detachEvent('on' + event.type, IEReadyState);
             init(event);
           }
         }
-        document.attachEvent(MSType, IEReadyState);
-        document.attachEvent('load', IEReadyState);
+
+        d.attachEvent(MSType, IEReadyState);
+        host.attachEvent('onload', IEReadyState);
 
       // fallback to last resort for older browsers
       } else {
