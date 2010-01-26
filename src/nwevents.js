@@ -551,7 +551,21 @@ NW.Event = (function(global) {
     } :
     // try manual dispatch
     function(element, type, capture) {
-      // (TODO)
+      notify(element, type, capture);
+    },
+
+  // notify listeners an event occurred
+  notify =
+    function(element, type, capture) {
+      var result = true;
+      if (typeof capture != 'undefined') {
+        result && (result = propagatePhase(element, type, !!capture));
+      } else {
+        result && (result = propagatePhase(element, type, true));
+        result && (result = propagatePhase(element, type, false));
+      }
+      element = null;
+      return result;
     },
 
   /* =========================== EVENT PROPAGATION ========================== */
