@@ -251,17 +251,19 @@ NW.Event = (function(global) {
           if (items[i] === this) {
             switch (phase) {
               case CAPTURING_PHASE:
-                if (!event.propagated || parms[i] === true) {
+                if (!!parms[i]) {
                   valid = true;
                 }
                 break;
               case BUBBLING_PHASE:
-                if (parms[i] === false) {
+                if (!parms[i]) {
                   valid = true;
                 }
                 break;
               case AT_TARGET:
-                if (!event.propagated || parms[i] === true) {
+                // maybe paranoid but helped spot bugs
+                // TODO: remove all AT_TARGET case :-)
+                if (typeof parms[i] === 'boolean') {
                   valid = true;
                 }
                 break;
