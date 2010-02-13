@@ -7,7 +7,7 @@
  * Author: Diego Perini <diego.perini at gmail com>
  * Version: 1.2.4beta
  * Created: 20051016
- * Release: 20100111
+ * Release: 20100210
  *
  * License:
  *  http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -619,54 +619,58 @@ NW.Event = (function(global) {
     // W3C event model
     function(element, type, capture) {
       var event, d = getDocument(element), w = getWindow(d);
-      if (/mouse|click/.test(type)) {
-        try {
-          event = d.createEvent('MouseEvents');
-          event.initMouseEvent(type, true, true, w, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
-        } catch(e) {
-          event = d.createEvent('HTMLEvents');
-          event.initEvent(type, true, true);
-        }
-      } else if (/key(down|press|out)/.test(type)) {
+
+      if (SUPPORT_MOUSE_EVENTS && Mouse_Events[type]) {
+        event = d.createEvent('MouseEvents');
+        event.initMouseEvent(type, true, true, w, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+      } else if (SUPPORT_KEYBOARD_EVENTS && Keyboard_Events[type]) {
+        event = d.createEvent('KeyboardEvents');
+        event.initKeyboardEvent(type, true, true, w, false, false, false, false, 0, 0);
+      } else if (SUPPORT_OLDKEY_EVENTS && Keyboard_Events[type]) {
         event = d.createEvent('KeyEvents');
         event.initKeyEvent(type, true, true, w, false, false, false, false, 0, 0);
-      } else {
+      } else if (SUPPORT_TOUCH_EVENTS && Touch_Events[type]) {
+        event = d.createEvent('TouchEvent');
+        event.initTouchEvent(type, true, true, w, false, false, false, false, 0, 0);
+      } else if (SUPPORT_HTML_EVENTS && HTML_Events[type]) {
         event = d.createEvent('HTMLEvents');
         event.initEvent(type, true, true);
+      } else if (SUPPORT_DOM_EVENTS) {
+        event = d.createEvent('Events');
+        event.initEvent(type, true, true);
       }
-      // dispatch event type to element
+
       return element.dispatchEvent(event);
     } : root.fireEvent ?
     // IE event model
     function(element, type, capture) {
-      var event, d = getDocument(element);
-      event = d.createEventObject();
-      event.type = type;
-      event.target = element;
-      event.eventPhase = 0;
-      event.currentTarget = element;
-      event.cancelBubble= !!capture;
-      event.returnValue= undefined;
-      // fire event type on element
-      return element.fireEvent('on' + type, fixEvent(element, event, capture));
+
+      if (eventSupported(type)) {
+        var event = getDocument(element).createEventObject();
+        event.type = type;
+        event.target = element;
+        event.eventPhase = CUSTOM;
+        event.currentTarget = element;
+        event.cancelBubble= !!capture;
+        event.returnValue= undefined;
+        return element.fireEvent('on' + type, fixEvent(element, event, capture));
+      }
+
+      return notify(element, type, capture);
     } :
     // try manual dispatch
     function(element, type, capture) {
-      notify(element, type, capture);
+      return notify(element, type, capture);
     },
 
   // notify listeners an event occurred
   notify =
     function(element, type, capture) {
-      var result = true;
       if (typeof capture != 'undefined') {
-        result && (result = propagatePhase(element, type, !!capture));
-      } else {
-        result && (result = propagatePhase(element, type, true));
-        result && (result = propagatePhase(element, type, false));
+        return propagatePhase(element, type, !!capture);
       }
-      element = null;
-      return result;
+      return (propagatePhase(element, type, true) &&
+        propagatePhase(element, type, false));
     },
 
   /* =========================== EVENT PROPAGATION ========================== */
