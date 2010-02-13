@@ -25,7 +25,7 @@ NW.Event = (function(global) {
   USE_DOM2 = true,
 
   // event phases constants
-  CAPTURING_PHASE = 1, AT_TARGET = 2, BUBBLING_PHASE = 3,
+  CUSTOM = 0, CAPTURING_PHASE = 1, AT_TARGET = 2, BUBBLING_PHASE = 3,
 
   // event collections and predefined DOM0 register
   Handlers = { }, Delegates = { }, Listeners = { }, Predefined = { },
@@ -759,7 +759,7 @@ NW.Event = (function(global) {
         node = element, ancestors = [],
         event = synthesize(element, type, capture);
       // add synthetic flag
-      event.propagated=true;
+      event.propagated = true;
       // collect ancestors
       while(node) {
         ancestors.push(node);
@@ -1026,7 +1026,15 @@ NW.Event = (function(global) {
 
     // exposed event methods
 
+    Delegates: Delegates,
+
+    Listeners: Listeners,
+
+    Handlers: Handlers,
+
     stop: stop,
+
+    notify: notify,
 
     dispatch: dispatch,
 
