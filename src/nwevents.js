@@ -33,6 +33,31 @@ NW.Event = (function(global) {
   // initial script load context
   viewport = global, context = global.document, root = context.documentElement,
 
+  Keyboard_Events = {
+    textInput: 1,
+    // keypress deprecated in favor of textInput
+    keypress: 1, keydown: 1, keyup: 1
+  },
+
+  Mouse_Events = {
+    // dblclick is a non standard event
+    click: 1, dblclick: 1,
+    mousemove: 1, mousedown: 1, mouseup: 1
+  },
+
+  Touch_Events = {
+    // touch devices like iPhone/iPod
+    touchend: 1, touchmove: 1, touchstart: 1, touchcancel: 1,
+    gestureend: 1, gesturemove: 1, gesturestart: 1, gesturecancel: 1 
+  },
+
+  HTML_Events = {
+    // standard HTML events mostly window related
+    abort: 1, error: 1, load: 1, unload: 1, resize: 1, scroll: 1,
+    // standard controls events mostly form related
+    focus: 1, blur: 1, change: 1, select: 1, reset: 1, submit: 1
+  },
+
   EventCollection =
     function() {
       return {
