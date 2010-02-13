@@ -92,8 +92,82 @@ NW.Event = (function(global) {
   })(),
 
   // detect event model in use
-  W3C_MODEL = root.addEventListener && root.removeEventListener ? true : false,
-  MSIE_MODEL = root.attachEvent && root.detachEvent ? true : false,
+  W3C_MODEL =
+    root.addEventListener &&
+    root.removeEventListener &&
+    context.createEvent ? true : false,
+
+  MSIE_MODEL = !W3C_MODEL &&
+    root.attachEvent && root.detachEvent &&
+    context.createEventObject ? true : false,
+
+  IMPLEMENTATION = context.implementation ||
+    { hasFeatures: function() { return false; } },
+
+  SUPPORT_DOM_EVENTS =
+    'Event' in global && IMPLEMENTATION.hasFeature('Events', ''),
+
+  SUPPORT_UI_EVENTS =
+    SUPPORT_DOM_EVENTS && IMPLEMENTATION.hasFeature('UIEvents', ''),
+
+  SUPPORT_HTML_EVENTS =
+    SUPPORT_DOM_EVENTS && IMPLEMENTATION.hasFeature('HTMLEvents', ''),
+
+  SUPPORT_TEXT_EVENTS =
+    SUPPORT_DOM_EVENTS && IMPLEMENTATION.hasFeature('TextEvents', ''),
+
+  SUPPORT_MOUSE_EVENTS =
+    SUPPORT_DOM_EVENTS && IMPLEMENTATION.hasFeature('MouseEvents', ''),
+
+  SUPPORT_EVENT_PHASES = 'Event' in global && global.Event.AT_TARGET == 2,
+
+  // standard KeyboardEvent
+  SUPPORT_NEWKEY_EVENTS = SUPPORT_DOM_EVENTS && 'KeyboardEvent' in global,
+
+  // non standard KeyEvent
+  SUPPORT_OLDKEY_EVENTS = SUPPORT_DOM_EVENTS && 'KeyEvent' in global,
+
+  SUPPORT_KEYBOARD_EVENTS =
+    SUPPORT_DOM_EVENTS && IMPLEMENTATION.hasFeature('KeyboardEvents', ''),
+
+  SUPPORT_TOUCH_EVENTS =
+    SUPPORT_DOM_EVENTS && IMPLEMENTATION.hasFeature('TouchEvents', '') ||
+    (function () {
+      if (context && context.createEvent) {
+        try {
+          context.createEvent('TouchEvent');
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+    })(),
+
+  testTarget =
+    context.createDocumentFragment().
+      appendChild(context.createElement('div')),
+
+  supportedEvents = { },
+
+  eventSupported = W3C_MODEL ?
+    function(type) {
+      return true;
+    } :
+    function(type) {
+
+      if (supportedEvents[type] !== undefined) {
+        return supportedEvents[type];
+      }
+
+      try {
+        testTarget.fireEvent('on' + type);
+        supportedEvents[type] = true;
+      } catch (e) {
+        supportedEvents[type] = false;
+      }
+
+      return supportedEvents[type];
+    },
 
   /* ============================ UTILITY METHODS =========================== */
 
