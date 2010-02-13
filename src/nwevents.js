@@ -459,7 +459,7 @@ NW.Event = (function(global) {
       var i, j, k, l, types;
       if (typeof selector == 'string') {
         types = type.split(' ');
-        delegate = delegate || root;
+        delegate = delegate || context;
         for (i = 0, l = types.length; i < l; i++) {
           k = isRegistered(Delegates, selector, types[i], handler, delegate);
           if (k === false) {
@@ -490,7 +490,7 @@ NW.Event = (function(global) {
       var i, j, k, l, types;
       if (typeof type == 'string') {
         types = type.split(' ');
-        delegate = delegate || root;
+        delegate = delegate || context;
         for (i = 0, l = types.length; i < l; i++) {
           k = isRegistered(Delegates, selector, types[i], handler, delegate);
           if (k !== false) {
@@ -660,7 +660,7 @@ NW.Event = (function(global) {
       // add synthetic flag
       event.propagated=true;
       // collect ancestors
-      while(node.nodeType == 1) {
+      while(node) {
         ancestors.push(node);
         node = node.parentNode;
       }
