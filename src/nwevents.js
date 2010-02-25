@@ -673,6 +673,33 @@ NW.Event = (function(global) {
         propagatePhase(element, type, false));
     },
 
+  // register a subscriber for event publication
+  subscribe =
+    function(object, type, callback, capture) {
+      var k = isRegistered(Registers, object, type, callback, capture);
+      if (k === false) register(Registers, object, type, callback, capture);
+    },
+
+  // unregister a subscriber from event publication
+  unsubscribe =
+    function(object, type, callback, capture) {
+      var k = isRegistered(Registers, object, type, callback, capture);
+      if (k !== false) unregister(Registers, type, k);
+    },
+
+  // publish an event to registered subscribers
+  // TODO: make callbacks fire asynchronously
+  publish =
+    function(object, type, data, capture) {
+      var i, event, list = Registers[type];
+      for (i = 0, l = list.calls.length; l > i; i++) {
+        event = synthesize(object, type, list.parms[i]);
+        if (data) event.data = data;
+        event.currentTarget = list.items[i];
+        list.calls[i].call(object, event);
+      }
+    },
+
   /* =========================== EVENT PROPAGATION ========================== */
 
   //
