@@ -88,12 +88,11 @@ NW.Event = (function(global) {
     { hasFeatures: function() { return false; } },
 
   // detect activation capabilities,
-  // currently FF3, Opera and IE
+  // Firefox 3+, Safari 3+, Opera 9+, IE
   hasActive = 'activeElement' in context ?
     (function() {
       try {
-        context.activeElement = null;
-        return null === context.activeElement;
+        return (context.activeElement = null) || true;
       } catch(e) {
         return false;
       }
@@ -858,30 +857,24 @@ NW.Event = (function(global) {
   // only applied to form elements
   propagateFormAction =
     function(event) {
-      var target = event.target, type = target.type;
+      var target = event.target, type = target.type,
+        active = target.ownerDocument.activeElement;
       // handle activeElement on context document
-      if (target != context.activeElement) {
+      if (target != active) {
         if (!hasActive && target.nodeType == 1) {
-          context.activeElement = target;
-          context.focusElement = null;
+          target.ownerDocument.activeElement = target;
         }
       }
       // html form elements only
       if (type) {
-        // handle focusElement on context document
-        if (target != context.focusElement) {
-          if (!hasActive) {
-            context.focusElement = target;
-          }
-        }
         // keydown or mousedown on form elements
-        if (/file|text|password/.test(type) &&
+        if (/^(file|text|password)$/.test(type) &&
           event.keyCode == 13 && target.form) {
           type = 'submit';
           target = target.form;
-        } else if (/select-(one|multi)/.test(type)) {
+        } else if (/^(select-(one|multi)|text|textarea)$/.test(type)) {
           type = 'change';
-        } else if (/reset|submit/.test(type) && target.form) {
+        } else if (/^(reset|submit)$/.test(type) && target.form) {
           target = target.form;
         } else {
           // action was on a form element but
