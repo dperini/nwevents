@@ -37,7 +37,6 @@ NW.Event = (function(global) {
   viewport = global, context = global.document, root = context.documentElement,
 
   Keyboard_Events = {
-    textInput: 1,
     // keypress deprecated in favor of textInput
     keypress: 1, keydown: 1, keyup: 1
   },
@@ -45,20 +44,32 @@ NW.Event = (function(global) {
   Mouse_Events = {
     // dblclick is a non standard event
     click: 1, dblclick: 1,
+    mouseout: 1, mouseover: 1,
+    mouseenter: 1, mouseleave: 1,
     mousemove: 1, mousedown: 1, mouseup: 1
   },
 
   Touch_Events = {
+    touchup: 1, touchdown: 1,
     // touch devices like iPhone/iPod
     touchend: 1, touchmove: 1, touchstart: 1, touchcancel: 1,
     gestureend: 1, gesturemove: 1, gesturestart: 1, gesturecancel: 1
   },
 
+  Text_Events = {
+    textInput: 1
+  },
+
   HTML_Events = {
     // standard HTML events mostly window related
-    abort: 1, error: 1, load: 1, unload: 1, resize: 1, scroll: 1,
+    load: 1, unload: 1, abort: 1, error: 1, resize: 1, scroll: 1,
     // standard controls events mostly form related
-    focus: 1, blur: 1, change: 1, select: 1, reset: 1, submit: 1
+    change: 1, select: 1, reset: 1, submit: 1
+  },
+
+  UI_Events = {
+    blur: 1, focus: 1, focusin: 1, focusout: 1,
+    DOMActivate: 1, DOMFocusIn: 1, DOMFocusOut: 1
   },
 
   EventCollection =
@@ -73,6 +84,9 @@ NW.Event = (function(global) {
 
   /* ============================ FEATURE TESTING =========================== */
 
+  implementation = context.implementation ||
+    { hasFeatures: function() { return false; } },
+
   // detect activation capabilities,
   // currently FF3, Opera and IE
   hasActive = 'activeElement' in context ?
@@ -84,6 +98,23 @@ NW.Event = (function(global) {
         return false;
       }
     }) : true,
+
+  hasFeature =
+    function(t, v) {
+      return implementation.hasFeature(t, v);
+    },
+
+  hasInterface = hasFeature('Events', '') ?
+    function (t) {
+      try {
+        return typeof context.createEvent(t)['init' + t] == 'function';
+      } catch (e) {
+        return false;
+      }
+    } :
+    function (t) {
+      return false;
+    },
 
   // detect native methods
   isNative = (function() {
@@ -104,47 +135,43 @@ NW.Event = (function(global) {
     root.attachEvent && root.detachEvent &&
     context.createEventObject ? true : false,
 
-  IMPLEMENTATION = context.implementation ||
-    { hasFeatures: function() { return false; } },
+  SUPPORT_EVENTS = 'Event' in global && hasInterface('Event', ''),
 
-  SUPPORT_DOM_EVENTS =
-    'Event' in global && IMPLEMENTATION.hasFeature('Events', ''),
+  SUPPORT_UI_EVENTS = SUPPORT_EVENTS && hasInterface('UIEvent', ''),
 
-  SUPPORT_UI_EVENTS =
-    SUPPORT_DOM_EVENTS && IMPLEMENTATION.hasFeature('UIEvents', ''),
+  SUPPORT_HTML_EVENTS = SUPPORT_EVENTS && hasFeature('HTMLEvents', ''),
 
-  SUPPORT_HTML_EVENTS =
-    SUPPORT_DOM_EVENTS && IMPLEMENTATION.hasFeature('HTMLEvents', ''),
+  SUPPORT_TEXT_EVENTS = SUPPORT_EVENTS && hasInterface('TextEvent', ''),
 
-  SUPPORT_TEXT_EVENTS =
-    SUPPORT_DOM_EVENTS && IMPLEMENTATION.hasFeature('TextEvents', ''),
+  SUPPORT_TOUCH_EVENTS = SUPPORT_EVENTS && hasInterface('TouchEvent', ''),
 
-  SUPPORT_MOUSE_EVENTS =
-    SUPPORT_DOM_EVENTS && IMPLEMENTATION.hasFeature('MouseEvents', ''),
+  SUPPORT_MOUSE_EVENTS = SUPPORT_EVENTS && hasInterface('MouseEvent', ''),
 
-  SUPPORT_EVENT_PHASES = 'Event' in global && global.Event.AT_TARGET == 2,
+  SUPPORT_EVENT_PHASES = SUPPORT_EVENTS && global.Event.AT_TARGET == 2,
 
   // standard KeyboardEvent
-  SUPPORT_NEWKEY_EVENTS = SUPPORT_DOM_EVENTS && 'KeyboardEvent' in global,
+  SUPPORT_NEWKEY_EVENTS = SUPPORT_EVENTS && 'KeyboardEvent' in global,
 
   // non standard KeyEvent
-  SUPPORT_OLDKEY_EVENTS = SUPPORT_DOM_EVENTS && 'KeyEvent' in global,
+  SUPPORT_OLDKEY_EVENTS = SUPPORT_EVENTS && 'KeyEvent' in global,
 
-  SUPPORT_KEYBOARD_EVENTS =
-    SUPPORT_DOM_EVENTS && IMPLEMENTATION.hasFeature('KeyboardEvents', ''),
+  SUPPORT_KEYBOARD_EVENTS = SUPPORT_EVENTS &&
+    hasInterface('KeyboardEvent', '') || hasInterface('KeyEvents'),
 
-  SUPPORT_TOUCH_EVENTS =
-    SUPPORT_DOM_EVENTS && IMPLEMENTATION.hasFeature('TouchEvents', '') ||
-    (function () {
-      if (context && context.createEvent) {
-        try {
-          context.createEvent('TouchEvent');
-          return true;
-        } catch (e) {
-          return false;
-        }
+  Events = {
+    KeyboardEvent: 1,
+    KeyEvents: 1,
+    TextEvent: 0,
+    UIEvent: 1,
+    Event: 1
+  },
+
+  KEYBOARD_EVENT = SUPPORT_EVENTS ?
+    (function() {
+      for (var i in Events) {
+        if (hasInterface(i)) return i;
       }
-    })(),
+    })() : '',
 
   testTarget =
     context.createDocumentFragment().
@@ -305,13 +332,12 @@ NW.Event = (function(global) {
         phase = event.eventPhase;
 
         if (!event.propagated && FormActivationEvents[type]) {
-          if (event.preventDefault) event.preventDefault();
-          else event.returnValue = false;
           return true;
         }
 
         // only AT_TARGET event.target === event.currentTarget
         if (phase !== AT_TARGET && event.target === this) {
+          if (event.propagated && phase == CAPTURING_PHASE) return true;
           phase = event.eventPhase = AT_TARGET;
         }
 
@@ -621,10 +647,10 @@ NW.Event = (function(global) {
       var event, d = getDocument(element), w = getWindow(d);
 
       if (SUPPORT_MOUSE_EVENTS && Mouse_Events[type]) {
-        event = d.createEvent('MouseEvents');
+        event = d.createEvent('MouseEvent');
         event.initMouseEvent(type, true, true, w, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
       } else if (SUPPORT_KEYBOARD_EVENTS && Keyboard_Events[type]) {
-        event = d.createEvent('KeyboardEvents');
+        event = d.createEvent('KeyboardEvent');
         event.initKeyboardEvent(type, true, true, w, false, false, false, false, 0, 0);
       } else if (SUPPORT_OLDKEY_EVENTS && Keyboard_Events[type]) {
         event = d.createEvent('KeyEvents');
@@ -635,8 +661,8 @@ NW.Event = (function(global) {
       } else if (SUPPORT_HTML_EVENTS && HTML_Events[type]) {
         event = d.createEvent('HTMLEvents');
         event.initEvent(type, true, true);
-      } else if (SUPPORT_DOM_EVENTS) {
-        event = d.createEvent('Events');
+      } else if (SUPPORT_EVENTS) {
+        event = d.createEvent('Event');
         event.initEvent(type, true, true);
       }
 
