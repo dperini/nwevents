@@ -134,43 +134,31 @@ NW.Event = (function(global) {
     root.attachEvent && root.detachEvent &&
     context.createEventObject ? true : false,
 
-  SUPPORT_EVENTS = 'Event' in global && hasInterface('Event', ''),
+  SUPPORT_EVENTS = 'Event' in global && hasInterface('Event'),
 
-  SUPPORT_UI_EVENTS = SUPPORT_EVENTS && hasInterface('UIEvent', ''),
+  SUPPORT_UI_EVENTS = SUPPORT_EVENTS && hasInterface('UIEvent'),
 
   SUPPORT_HTML_EVENTS = SUPPORT_EVENTS && hasFeature('HTMLEvents', ''),
 
-  SUPPORT_TEXT_EVENTS = SUPPORT_EVENTS && hasInterface('TextEvent', ''),
+  SUPPORT_TEXT_EVENTS = SUPPORT_EVENTS && hasInterface('TextEvent'),
 
-  SUPPORT_TOUCH_EVENTS = SUPPORT_EVENTS && hasInterface('TouchEvent', ''),
+  SUPPORT_TOUCH_EVENTS = SUPPORT_EVENTS && hasInterface('TouchEvent'),
 
-  SUPPORT_MOUSE_EVENTS = SUPPORT_EVENTS && hasInterface('MouseEvent', ''),
+  SUPPORT_MOUSE_EVENTS = SUPPORT_EVENTS && hasInterface('MouseEvent'),
+
+  SUPPORT_KEYBOARD_EVENTS = SUPPORT_EVENTS && hasInterface('KeyboardEvent'),
 
   SUPPORT_EVENT_PHASES = SUPPORT_EVENTS && global.Event.AT_TARGET == 2,
 
-  // standard KeyboardEvent
-  SUPPORT_NEWKEY_EVENTS = SUPPORT_EVENTS && 'KeyboardEvent' in global,
+  // non standard Firefox KeyEvent
+  SUPPORT_KEY_EVENTS = SUPPORT_EVENTS && 'KeyEvent' in global &&
+    typeof KeyEvent.prototype.initEvent == 'function',
 
-  // non standard KeyEvent
-  SUPPORT_OLDKEY_EVENTS = SUPPORT_EVENTS && 'KeyEvent' in global,
+  KEYBOARD_EVENT_FIX = SUPPORT_KEYBOARD_EVENTS ? '' : 's';
 
-  SUPPORT_KEYBOARD_EVENTS = SUPPORT_EVENTS &&
-    hasInterface('KeyboardEvent', '') || hasInterface('KeyEvents'),
-
-  Events = {
-    KeyboardEvent: 1,
-    KeyEvents: 1,
-    TextEvent: 0,
-    UIEvent: 1,
-    Event: 1
-  },
-
-  KEYBOARD_EVENT = SUPPORT_EVENTS ?
-    (function() {
-      for (var i in Events) {
-        if (hasInterface(i)) return i;
-      }
-    })() : '',
+  KEYBOARD_EVENT = SUPPORT_KEYBOARD_EVENTS ?
+    'KeyboardEvent' : 'KeyEvent',
+  // end non standard...
 
   testTarget =
     context.createDocumentFragment().
@@ -639,36 +627,60 @@ NW.Event = (function(global) {
       return this;
     },
 
-  // programatically dispatch native or custom events
+  // dispatch native or custom events to registered listeners
+  // this is performed using native DOM Event API if possible
+  // so the event propagates to other DOM listening instances
   dispatch = root.dispatchEvent ?
     // W3C event model
-    function(element, type, capture) {
-      var event, d = getDocument(element), w = getWindow(d);
+    function(element, type, capture, options) {
+      var event, d = getDocument(element), view = getWindow(d).defaultView;
+
+      options || (options = { });
 
       if (SUPPORT_MOUSE_EVENTS && Mouse_Events[type]) {
+
         event = d.createEvent('MouseEvent');
-        event.initMouseEvent(type, true, true, w, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
-      } else if (SUPPORT_KEYBOARD_EVENTS && Keyboard_Events[type]) {
-        event = d.createEvent('KeyboardEvent');
-        event.initKeyboardEvent(type, true, true, w, false, false, false, false, 0, 0);
-      } else if (SUPPORT_OLDKEY_EVENTS && Keyboard_Events[type]) {
-        event = d.createEvent('KeyEvents');
-        event.initKeyEvent(type, true, true, w, false, false, false, false, 0, 0);
+        event.initMouseEvent(type,
+          options.bubbles || true, options.cancelable || true, view,
+          options.detail || 0, options.screenX || 0, options.screenY || 0, options.clientX || 0, options.clientY || 0,
+          options.ctrlKey || false, options.altKey || false, options.shiftKey || false, options.metaKey || false,
+          options.button || 0, options.relatedTarget || null);
+
+      } else if (SUPPORT_KEYBOARD_EVENTS || SUPPORT_KEY_EVENTS && Keyboard_Events[type]) {
+
+        event = d.createEvent(KEYBOARD_EVENT + KEYBOARD_EVENT_FIX);
+        event['init' + KEYBOARD_EVENT](type,
+          options.bubbles || true, options.cancelable || true, view,
+          /* DOM3 KeyboardEvent: option.keyIndentifier || '', option.keyLocation || 0, option.modifierList || '' */
+          options.ctrlKey || false, options.altKey || false, options.shiftKey || false, options.metaKey || false,
+          options.keyCode || 0, options.charCode || 0);
+
       } else if (SUPPORT_TOUCH_EVENTS && Touch_Events[type]) {
+
         event = d.createEvent('TouchEvent');
-        event.initTouchEvent(type, true, true, w, false, false, false, false, 0, 0);
-      } else if (SUPPORT_HTML_EVENTS && HTML_Events[type]) {
-        event = d.createEvent('HTMLEvents');
-        event.initEvent(type, true, true);
+        event.initTouchEvent(type,
+          options.bubbles || true, options.cancelable || true, view,
+          options.detail || 0, options.screenX || 0, options.screenY || 0, options.clientX || 0, options.clientY || 0,
+          options.ctrlKey || false, options.altKey || false, options.shiftKey || false, options.metaKey || false,
+          options.touches || [ ], options.targetTouches || [ ], options.changedTouches || [ ],
+                  options.scale || 1.0, options.rotation || 0.0);
+
+      } else if (SUPPORT_UI_EVENTS && UI_Events[type]) {
+
+        event = d.createEvent('UIEvent');
+        event.initUIEvent(type, options.bubbles || true, options.cancelable || true, view, options.detail);
+
       } else if (SUPPORT_EVENTS) {
+
         event = d.createEvent('Event');
-        event.initEvent(type, true, true);
+        event.initEvent(type, options.bubbles || true, options.cancelable || true);
+
       }
 
       return element.dispatchEvent(event);
     } : root.fireEvent ?
     // IE event model
-    function(element, type, capture) {
+    function(element, type, capture, options) {
 
       if (eventSupported(type)) {
         var event = getDocument(element).createEventObject();
@@ -678,19 +690,20 @@ NW.Event = (function(global) {
         event.currentTarget = element;
         event.cancelBubble= !!capture;
         event.returnValue= undefined;
+        for (var i in options) event[i] = options[i];
         return element.fireEvent('on' + type, fixEvent(element, event, capture));
       }
 
-      return notify(element, type, capture);
+      return notify(element, type, capture, options || { });
     } :
     // try manual dispatch
-    function(element, type, capture) {
-      return notify(element, type, capture);
+    function(element, type, capture, options) {
+      return notify(element, type, capture, options || { });
     },
 
   // notify registered listeners an event occurred
   notify =
-    function(element, type, capture) {
+    function(element, type, capture, options) {
       if (typeof capture != 'undefined') {
         return propagatePhase(element, type, !!capture);
       }
@@ -700,14 +713,14 @@ NW.Event = (function(global) {
 
   // register a subscriber for event publication
   subscribe =
-    function(object, type, callback, capture) {
+    function(object, type, callback, capture, options) {
       var k = isRegistered(Registers, object, type, callback, capture);
       if (k === false) register(Registers, object, type, callback, capture);
     },
 
   // unregister a subscriber from event publication
   unsubscribe =
-    function(object, type, callback, capture) {
+    function(object, type, callback, capture, options) {
       var k = isRegistered(Registers, object, type, callback, capture);
       if (k !== false) unregister(Registers, type, k);
     },
@@ -715,10 +728,10 @@ NW.Event = (function(global) {
   // publish an event to registered subscribers
   // TODO: make callbacks fire asynchronously
   publish =
-    function(object, type, data, capture) {
+    function(object, type, data, capture, options) {
       var i, event, list = Registers[type];
       for (i = 0, l = list.calls.length; l > i; i++) {
-        event = synthesize(object, type, list.parms[i]);
+        event = synthesize(object, type, list.parms[i], options);
         if (data) event.data = data;
         event.currentTarget = list.items[i];
         list.calls[i].call(object, event);
@@ -773,8 +786,8 @@ NW.Event = (function(global) {
 
   // create a synthetic event
   synthesize =
-    function(element, type, capture) {
-      return {
+    function(element, type, capture, options) {
+      var event = {
         type: type,
         target: element,
         bubbles: true,
@@ -786,6 +799,8 @@ NW.Event = (function(global) {
         stopPropagation: stopPropagation,
         eventPhase: capture ? CAPTURING_PHASE : BUBBLING_PHASE
       };
+      for (var i in options) event[i] = options[i];
+      return event;
     },
 
   // propagate events traversing the
