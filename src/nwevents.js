@@ -42,6 +42,8 @@ NW.Event = (function(global) {
   },
 
   Mouse_Events = {
+    // contextmenu is a non standard event
+    contextmenu: 1,
     // dblclick is a non standard event
     click: 1, dblclick: 1,
     mouseout: 1, mouseover: 1,
@@ -57,19 +59,22 @@ NW.Event = (function(global) {
   },
 
   Text_Events = {
-    textInput: 1
-  },
-
-  HTML_Events = {
-    // standard HTML events mostly window related
-    load: 1, unload: 1, abort: 1, error: 1, resize: 1, scroll: 1,
-    // standard controls events mostly form related
-    change: 1, select: 1, reset: 1, submit: 1
+    // input/textarea elements
+    textInput: 1, keydown: 1, keyup: 1
   },
 
   UI_Events = {
+    // keyboard focus and activation events
     blur: 1, focus: 1, focusin: 1, focusout: 1,
     DOMActivate: 1, DOMFocusIn: 1, DOMFocusOut: 1
+  },
+
+  Events = {
+    // host objects and binary content related
+    abort: 1, error: 1,
+    load: 1, unload: 1, resize: 1, scroll: 1,
+    // forms and control elements related
+    change: 1, input: 1, select: 1, reset: 1, submit: 1
   },
 
   EventCollection =
@@ -100,7 +105,7 @@ NW.Event = (function(global) {
 
   hasFeature =
     function(t, v) {
-      return implementation.hasFeature(t, v);
+      return implementation.hasFeature(t, v || '');
     },
 
   hasInterface = hasFeature('Events', '') ?
@@ -126,38 +131,36 @@ NW.Event = (function(global) {
 
   // detect event model in use
   W3C_MODEL =
-    root.addEventListener &&
-    root.removeEventListener &&
-    context.createEvent ? true : false,
+    isNative(root, 'addEventListener') &&
+    isNative(root, 'removeEventListener') &&
+    isNative(context, 'createEvent'),
 
   MSIE_MODEL = !W3C_MODEL &&
-    root.attachEvent && root.detachEvent &&
-    context.createEventObject ? true : false,
+    isNative(root, 'attachEvent') &&
+    isNative(root, 'detachEvent') &&
+    isNative(context, 'createEventObject'),
 
-  SUPPORT_EVENTS = 'Event' in global && hasInterface('Event'),
+  SUPPORT_EVENTS = hasInterface('Event'),
 
-  SUPPORT_UI_EVENTS = SUPPORT_EVENTS && hasInterface('UIEvent'),
+  SUPPORT_UI_EVENTS = hasInterface('UIEvent'),
 
-  SUPPORT_HTML_EVENTS = SUPPORT_EVENTS && hasFeature('HTMLEvents', ''),
+  SUPPORT_TEXT_EVENTS = hasInterface('TextEvent'),
 
-  SUPPORT_TEXT_EVENTS = SUPPORT_EVENTS && hasInterface('TextEvent'),
+  SUPPORT_TOUCH_EVENTS = hasInterface('TouchEvent'),
 
-  SUPPORT_TOUCH_EVENTS = SUPPORT_EVENTS && hasInterface('TouchEvent'),
+  SUPPORT_MOUSE_EVENTS = hasInterface('MouseEvent'),
 
-  SUPPORT_MOUSE_EVENTS = SUPPORT_EVENTS && hasInterface('MouseEvent'),
-
-  SUPPORT_KEYBOARD_EVENTS = SUPPORT_EVENTS && hasInterface('KeyboardEvent'),
-
-  SUPPORT_EVENT_PHASES = SUPPORT_EVENTS && global.Event.AT_TARGET == 2,
+  SUPPORT_KEYBOARD_EVENTS = hasInterface('KeyboardEvent'),
 
   // non standard Firefox KeyEvent
-  SUPPORT_KEY_EVENTS = SUPPORT_EVENTS && 'KeyEvent' in global &&
+  SUPPORT_KEY_EVENTS = 'KeyEvent' in global &&
     typeof KeyEvent.prototype.initEvent == 'function',
 
-  KEYBOARD_EVENT_FIX = SUPPORT_KEYBOARD_EVENTS ? '' : 's';
+  KEYBOARD_FIX = SUPPORT_KEYBOARD_EVENTS ? '' : 's';
 
-  KEYBOARD_EVENT = SUPPORT_KEYBOARD_EVENTS ?
-    'KeyboardEvent' : 'KeyEvent',
+  KEYBOARD_EVENT = SUPPORT_KEY_EVENTS ? 'KeyEvent' :
+    SUPPORT_KEYBOARD_EVENTS ? 'KeyboardEvent' :
+    SUPPORT_UI_EVENTS ? 'UIEvent' : 'Event',
   // end non standard...
 
   testTarget =
@@ -166,24 +169,102 @@ NW.Event = (function(global) {
 
   supportedEvents = { },
 
-  eventSupported = W3C_MODEL ?
-    function(type) {
+  isEventSupported = W3C_MODEL ?
+    function(type, element) {
       return true;
-    } :
-    function(type) {
+    } : MSIE_MODEL ?
+    function(type, element) {
 
       if (supportedEvents[type] !== undefined) {
         return supportedEvents[type];
       }
 
       try {
-        testTarget.fireEvent('on' + type);
+        (element || testTarget).fireEvent('on' + type);
         supportedEvents[type] = true;
       } catch (e) {
         supportedEvents[type] = false;
       }
 
       return supportedEvents[type];
+    } :
+	function () { },
+
+  /* =========================== TRIGGER HANDLERS =========================== */
+
+  TRIGGER_EVENT = 'onhelp',
+
+  trigger = function() { },
+  triggerArguments = null,
+  triggerCallback = null,
+  triggerEnabled = false,
+
+  triggerTarget =
+    context.createDocumentFragment().
+      appendChild(context.createElement('div')),
+
+  triggerEvent = W3C_MODEL ?
+    (function() {
+      var event = context.createEvent('Event');
+      event.initEvent(TRIGGER_EVENT, true, true);
+      return event;
+    })() :
+    (function() {
+      var event = context.createEventObject();
+      event.type = 'onhelp';
+      event.bubbles = true;
+      event.cancelable = true;
+      return event;
+    })(),
+
+  triggerEnable = W3C_MODEL ?
+    function(enable) {
+      triggerSet();
+      if ((triggerEnabled = !!enable)) {
+        triggerTarget.addEventListener(TRIGGER_EVENT, triggerExec, false);
+      } else {
+        triggerTarget.removeEventListener(TRIGGER_EVENT, triggerExec, false);
+      }
+    } : MSIE_MODEL ?
+    function(enable) {
+      triggerSet();
+      if ((triggerEnabled = !!enable)) {
+        triggerTarget.attachEvent(TRIGGER_EVENT, triggerExec);
+      } else {
+        triggerTarget.detachEvent(TRIGGER_EVENT, triggerExec);
+      }
+    } :
+	function(enable) {
+      triggerSet();
+      triggerEnabled = !!enable;
+    },
+
+  triggerExec =
+    function() {
+      if (typeof triggerCallback == 'function') {
+        triggerCallback.call(triggerArguments[0], triggerArguments[1]);
+      }
+    },
+
+  triggerSet =
+    function() {
+      trigger = W3C_MODEL && triggerEnabled ?
+        function(callback, args) {
+          triggerArguments = args;
+          triggerCallback = callback;
+          triggerEvent.initEvent(TRIGGER_EVENT, true, true);
+          triggerTarget.dispatchEvent(triggerEvent);
+        } : MSIE_MODEL && triggerEnabled ?
+        function(callback, args) {
+          triggerArguments = args;
+          triggerCallback = callback;
+          triggerEvent.bubbles = true;
+          triggerEvent.cancelable = true;
+          triggerTarget.fireEvent(TRIGGER_EVENT, triggerEvent);
+        } :
+        function(callback, args) {
+          callback.call(args[0], args[1]);
+        };
     },
 
   /* ============================ UTILITY METHODS =========================== */
@@ -648,7 +729,7 @@ NW.Event = (function(global) {
 
       } else if (SUPPORT_KEYBOARD_EVENTS || SUPPORT_KEY_EVENTS && Keyboard_Events[type]) {
 
-        event = d.createEvent(KEYBOARD_EVENT + KEYBOARD_EVENT_FIX);
+        event = d.createEvent(KEYBOARD_EVENT + KEYBOARD_FIX);
         event['init' + KEYBOARD_EVENT](type,
           options.bubbles || true, options.cancelable || true, view,
           /* DOM3 KeyboardEvent: option.keyIndentifier || '', option.keyLocation || 0, option.modifierList || '' */
@@ -663,7 +744,7 @@ NW.Event = (function(global) {
           options.detail || 0, options.screenX || 0, options.screenY || 0, options.clientX || 0, options.clientY || 0,
           options.ctrlKey || false, options.altKey || false, options.shiftKey || false, options.metaKey || false,
           options.touches || [ ], options.targetTouches || [ ], options.changedTouches || [ ],
-                  options.scale || 1.0, options.rotation || 0.0);
+          options.scale || 1.0, options.rotation || 0.0);
 
       } else if (SUPPORT_UI_EVENTS && UI_Events[type]) {
 
@@ -682,7 +763,7 @@ NW.Event = (function(global) {
     // IE event model
     function(element, type, capture, options) {
 
-      if (eventSupported(type)) {
+      if (isEventSupported(type)) {
         var event = getDocument(element).createEventObject();
         event.type = type;
         event.target = element;
@@ -734,7 +815,11 @@ NW.Event = (function(global) {
         event = synthesize(object, type, list.parms[i], options);
         if (data) event.data = data;
         event.currentTarget = list.items[i];
-        list.calls[i].call(object, event);
+        if (typeof trigger == 'function') {
+          trigger(list.calls[i], [object, event]);
+        } else {
+          list.calls[i].call(object, event);
+        }
       }
     },
 
@@ -1080,6 +1165,11 @@ NW.Event = (function(global) {
     enablePropagation(context);
   }
 
+  // initialize context execution
+  if (typeof trigger == 'function') {
+    triggerEnable(false);
+  }
+
   // initialize global ready event
   contentLoaded(global, complete);
 
@@ -1129,7 +1219,7 @@ NW.Event = (function(global) {
     removeDelegate: undelegate,
 
     // helpers and debugging functions
-    eventSupported: eventSupported,
+    isEventSupported: isEventSupported,
 
     enablePropagation: enablePropagation,
     disablePropagation: disablePropagation
