@@ -7,7 +7,7 @@
  * Author: Diego Perini <diego.perini at gmail com>
  * Version: 1.2.4beta
  * Created: 20051016
- * Release: 20100210
+ * Release: 20100302
  *
  * License:
  *  http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -15,9 +15,7 @@
  *  http://javascript.nwbox.com/NWEvents/nwevents.js
  */
 
-window.NW || (window.NW = {});
-
-NW.Event = (function(global) {
+(function(global, undefined) {
 
   var version = 'nwevents-1.2.4beta',
 
@@ -156,7 +154,7 @@ NW.Event = (function(global) {
   SUPPORT_KEY_EVENTS = 'KeyEvent' in global &&
     typeof KeyEvent.prototype.initEvent == 'function',
 
-  KEYBOARD_FIX = SUPPORT_KEYBOARD_EVENTS ? '' : 's';
+  KEYBOARD_FIX = SUPPORT_KEYBOARD_EVENTS ? '' : 's',
 
   KEYBOARD_EVENT = SUPPORT_KEY_EVENTS ? 'KeyEvent' :
     SUPPORT_KEYBOARD_EVENTS ? 'KeyboardEvent' :
@@ -188,7 +186,7 @@ NW.Event = (function(global) {
 
       return supportedEvents[type];
     } :
-	function () { },
+    function () { },
 
   /* =========================== TRIGGER HANDLERS =========================== */
 
@@ -234,7 +232,7 @@ NW.Event = (function(global) {
         triggerTarget.detachEvent(TRIGGER_EVENT, triggerExec);
       }
     } :
-	function(enable) {
+    function(enable) {
       triggerSet();
       triggerEnabled = !!enable;
     },
@@ -1173,7 +1171,9 @@ NW.Event = (function(global) {
   // initialize global ready event
   contentLoaded(global, complete);
 
-  return {
+  global.NW || (global.NW = { });
+
+  NW.Event || (NW.Event = {
 
     // controls the type of registration
     // for event listeners (DOM0 / DOM2)
@@ -1224,13 +1224,13 @@ NW.Event = (function(global) {
     enablePropagation: enablePropagation,
     disablePropagation: disablePropagation
 
-  };
+  });
 
 })(this);
 
 // embedded NW.Dom.match() so basic event delegation works,
 // overwritten if loading the nwmatcher.js selector engine
-NW.Dom = (function(global) {
+(function(global, undefined) {
 
   var Patterns = {
     'id': /#([^\.]+)/,
@@ -1239,7 +1239,9 @@ NW.Dom = (function(global) {
     'all': /^[\.\-\#\w]+$/
   };
 
-  return {
+  global.NW || (global.NW = { });
+
+  NW.Dom = ({
     // use a simple selector match or a full
     // CSS3 selector engine if it is available
     match:
@@ -1306,6 +1308,6 @@ NW.Dom = (function(global) {
         return matched;
       }
 
-  };
+  });
 
 })(this);
