@@ -398,6 +398,8 @@
         phase = event.eventPhase;
 
         if (!event.propagated && FormActivationEvents[type]) {
+          if (event.preventDefault) event.preventDefault();
+          else event.returnValue = false;
           return true;
         }
 
