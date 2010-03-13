@@ -7,7 +7,7 @@
  * Author: Diego Perini <diego.perini at gmail com>
  * Version: 1.2.4beta
  * Created: 20051016
- * Release: 20100302
+ * Release: 20100314
  *
  * License:
  *  http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -398,8 +398,6 @@
         phase = event.eventPhase;
 
         if (!event.propagated && FormActivationEvents[type]) {
-          if (event.preventDefault) event.preventDefault();
-          else event.returnValue = false;
           return true;
         }
 
@@ -444,8 +442,11 @@
                 break;
             }
           }
+
           if (valid && (result = calls[i].call(this, event)) === false) break;
         }
+
+        if (result === false) stop(event);
 
       }
 
@@ -771,6 +772,8 @@
         event.currentTarget = element;
         event.cancelBubble= !!capture;
         event.returnValue= undefined;
+        event.preventDefault = preventDefault;
+        event.stopPropagation = stopPropagation;
         for (var i in options) event[i] = options[i];
         return element.fireEvent('on' + type, fixEvent(element, event, capture));
       }
@@ -900,10 +903,12 @@
       // remove the trampoline event
       unset(target, type, propagate, false);
       // submit/reset events relayed to parent forms
-      if (target.form) { target = target.form; }
+      if (target.form && /submit|reset/.test(type)) {
+        target = target.form;
+      }
       // execute existing native methods if not overwritten
       result && isNative(target, type) && target[type]();
-      // return flag
+      result || stop(event);
       return result;
     },
 
