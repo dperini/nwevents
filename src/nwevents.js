@@ -759,6 +759,8 @@
 
       }
 
+      if (FormActivationEvents[type]) event.propagated = true;
+
       return element.dispatchEvent(event);
     } : root.fireEvent ?
     // IE event model
@@ -775,6 +777,8 @@
         event.preventDefault = preventDefault;
         event.stopPropagation = stopPropagation;
         for (var i in options) event[i] = options[i];
+        if (FormActivationEvents[type]) event.propagated = true;
+
         return element.fireEvent('on' + type, fixEvent(element, event, capture));
       }
 
