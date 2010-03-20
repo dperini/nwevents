@@ -15,7 +15,7 @@
  *  http://javascript.nwbox.com/NWEvents/nwevents.js
  */
 
-(function(global, undefined) {
+(function(global) {
 
   var version = 'nwevents-1.2.4beta',
 
@@ -173,7 +173,7 @@
     } : MSIE_MODEL ?
     function(type, element) {
 
-      if (supportedEvents[type] !== undefined) {
+      if (typeof supportedEvents[type] != 'undefined') {
         return supportedEvents[type];
       }
 
@@ -771,9 +771,9 @@
         event.type = type;
         event.target = element;
         event.eventPhase = CUSTOM;
+        event.returnValue = true;
+        event.cancelBubble = !!capture;
         event.currentTarget = element;
-        event.cancelBubble= !!capture;
-        event.returnValue= undefined;
         event.preventDefault = preventDefault;
         event.stopPropagation = stopPropagation;
         for (var i in options) event[i] = options[i];
@@ -884,8 +884,9 @@
         target: element,
         bubbles: true,
         cancelable: true,
-        currentTarget: element,
+        propagated: true,
         relatedTarget: null,
+        currentTarget: element,
         timeStamp: +new Date(),
         preventDefault: preventDefault,
         stopPropagation: stopPropagation,
@@ -907,7 +908,7 @@
       // remove the trampoline event
       unset(target, type, propagate, false);
       // submit/reset events relayed to parent forms
-      if (target.form && /submit|reset/.test(type)) {
+      if (target.form && (/submit|reset/).test(type)) {
         target = target.form;
       }
       // execute existing native methods if not overwritten
@@ -923,8 +924,6 @@
         result = true,
         node = element, ancestors = [],
         event = synthesize(element, type, capture);
-      // add synthetic flag
-      event.propagated = true;
       // collect ancestors
       while(node) {
         ancestors.push(node);
@@ -944,8 +943,6 @@
           break;
         }
       }
-      // remove synthetic flag
-      delete event.propagated;
       return result;
     },
 
@@ -1241,7 +1238,7 @@
 
 // embedded NW.Dom.match() so basic event delegation works,
 // overwritten if loading the nwmatcher.js selector engine
-(function(global, undefined) {
+(function(global) {
 
   var Patterns = {
     'id': /#([^\.]+)/,
