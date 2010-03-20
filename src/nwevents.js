@@ -131,7 +131,7 @@
 
   // detect event model in use
   W3C_MODEL =
-    isNative(root, 'dispatchEvent') && 
+    isNative(root, 'dispatchEvent') &&
     isNative(root, 'addEventListener') &&
     isNative(root, 'removeEventListener') &&
     isNative(context, 'createEvent'),
@@ -374,7 +374,7 @@
   // list event handlers bound to
   // a given object for each type
   getRegistered =
-    function(object, type, register) {
+    function(object, type, capture, register) {
       var i, j, l, results = [ ];
       type || (type = '*');
       object || (object = '*');
@@ -382,7 +382,9 @@
       for (i in register) {
         if (type.indexOf(i) > -1 || type == '*') {
           for (j = 0, l = register[i].items.length; j < l; j++) {
-            if (register[i].items[j] === object || object == '*') {
+            if (object == '*' ||
+              (register[i].items[j] === object &&
+              register[i].parms[j] === capture)) {
               results.push(register[i].calls[j]);
             }
           }
@@ -615,7 +617,7 @@
           k = isRegistered(Listeners, element, types[i], handler, capture);
           if (k === false) {
             register(Listeners, element, types[i], handler, capture);
-            if (getRegistered(element, types[i], Listeners).length === 1) {
+            if (getRegistered(element, types[i], capture, Listeners).length === 1) {
               set(element, types[i], processListeners, capture);
             }
           }
@@ -638,7 +640,7 @@
         for (i = 0, l = types.length; i < l; i++) {
           k = isRegistered(Listeners, element, types[i], handler, capture);
           if (k !== false) {
-            if (getRegistered(element, types[i], Listeners).length === 1) {
+            if (getRegistered(element, types[i], capture, Listeners).length === 1) {
               unset(element, types[i], processListeners, capture);
             }
             unregister(Listeners, types[i], k);
