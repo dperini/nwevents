@@ -821,19 +821,20 @@
       if (k !== false) unregister(Registers, type, k);
     },
 
-  // publish an event to registered subscribers
-  // TODO: make callbacks fire asynchronously
+  // publish an event on to registered subscribers
   publish =
     function(object, type, data, capture, options) {
       var i, event, list = Registers[type];
-      for (i = 0, l = list.calls.length; l > i; i++) {
-        event = synthesize(object, type, list.parms[i], options);
-        if (data) event.data = data;
-        event.currentTarget = list.items[i];
-        if (typeof trigger == 'function') {
-          trigger(list.calls[i], [object, event]);
-        } else {
-          list.calls[i].call(object, event);
+      if (list) {
+        for (i = 0, l = list.calls.length; l > i; i++) {
+          event = synthesize(object, type, list.parms[i], options);
+          if (data) event.data = data;
+          event.currentTarget = list.items[i];
+          if (typeof trigger == 'function') {
+            trigger(list.calls[i], [object, event]);
+          } else {
+            list.calls[i].call(object, event);
+          }
         }
       }
     },
@@ -919,8 +920,10 @@
       if (target.form && (/submit|reset/).test(type)) {
         target = target.form;
       }
-      // execute existing native methods if not overwritten
-      result && isNative(target, type) && target[type]();
+      if (Listeners[type] && Listeners[type].items.length) {
+        // execute existing native methods if not overwritten
+        result && isNative(target, type) && target[type]();
+      }
       result || stop(event);
       return result;
     },
