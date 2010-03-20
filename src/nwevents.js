@@ -32,7 +32,9 @@
   Registers = { },
 
   // initial script load context
-  viewport = global, context = global.document, root = context.documentElement,
+  viewport = global,
+  context = global.document || { },
+  root = context.documentElement || { },
 
   Keyboard_Events = {
     // keypress deprecated in favor of textInput
@@ -88,7 +90,7 @@
   /* ============================ FEATURE TESTING =========================== */
 
   implementation = context.implementation ||
-    { hasFeatures: function() { return false; } },
+    { hasFeature: function() { return false; } },
 
   // detect activation capabilities,
   // Firefox 3+, Safari 3+, Opera 9+, IE
@@ -129,11 +131,13 @@
 
   // detect event model in use
   W3C_MODEL =
+    isNative(root, 'dispatchEvent') && 
     isNative(root, 'addEventListener') &&
     isNative(root, 'removeEventListener') &&
     isNative(context, 'createEvent'),
 
   MSIE_MODEL = !W3C_MODEL &&
+    isNative(root, 'fireEvent') &&
     isNative(root, 'attachEvent') &&
     isNative(root, 'detachEvent') &&
     isNative(context, 'createEventObject'),
@@ -161,7 +165,7 @@
     SUPPORT_UI_EVENTS ? 'UIEvent' : 'Event',
   // end non standard...
 
-  testTarget =
+  testTarget = context.createDocumentFragment &&
     context.createDocumentFragment().
       appendChild(context.createElement('div')),
 
@@ -186,7 +190,7 @@
 
       return supportedEvents[type];
     } :
-    function () { },
+    function () { return false; },
 
   /* =========================== TRIGGER HANDLERS =========================== */
 
@@ -197,7 +201,7 @@
   triggerCallback = null,
   triggerEnabled = false,
 
-  triggerTarget =
+  triggerTarget = context.createDocumentFragment &&
     context.createDocumentFragment().
       appendChild(context.createElement('div')),
 
@@ -206,14 +210,15 @@
       var event = context.createEvent('Event');
       event.initEvent(TRIGGER_EVENT, true, true);
       return event;
-    })() :
+    })() : MSIE_MODEL ?
     (function() {
       var event = context.createEventObject();
       event.type = 'onhelp';
       event.bubbles = true;
       event.cancelable = true;
       return event;
-    })(),
+    })() :
+    null,
 
   triggerEnable = W3C_MODEL ?
     function(enable) {
@@ -712,7 +717,7 @@
   // dispatch native or custom events to registered listeners
   // this is performed using native DOM Event API if possible
   // so the event propagates to other DOM listening instances
-  dispatch = root.dispatchEvent ?
+  dispatch = W3C_MODEL ?
     // W3C event model
     function(element, type, capture, options) {
       var event, d = getDocument(element), view = getWindow(d).defaultView;
@@ -762,7 +767,7 @@
       if (FormActivationEvents[type]) event.propagated = true;
 
       return element.dispatchEvent(event);
-    } : root.fireEvent ?
+    } : MSIE_MODEL ?
     // IE event model
     function(element, type, capture, options) {
 
@@ -1074,7 +1079,7 @@
   // Cross-browser wrapper for DOMContentLoaded
   // http://javascript.nwbox.com/ContentLoaded/ +
   // http://javascript.nwbox.com/IEContentLoaded/
-  contentLoaded =
+  contentLoaded = W3C_MODEL || MSIE_MODEL ?
     function(host, callback, scope) {
 
       var d = host.document,
@@ -1158,6 +1163,9 @@
         };
 
       }
+    } :
+    function(host, callback, scope) {
+      callback && callback.call(scope, { });
     };
 
   // inititalize the activeElement
