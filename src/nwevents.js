@@ -279,27 +279,28 @@
     },
 
   // get window from document
-  getWindow = 'parentWindow' in top.document ?
+  getWindow = 'parentWindow' in context ?
     function(d) {
       return d.parentWindow || window;
-    } : 'defaultView' in top.document && top === top.document.defaultView ?
+    } : 'defaultView' in context && global === context.defaultView ?
     function(d) {
       return d.defaultView || window;
-    } :
+    } : global.frames ?
     function(d) {
       // fix for older Safari 2.0.x returning
       // [object AbstractView] instead of [window]
-      if (window.frames.length === 0 && top.document === d) {
-        return top;
+      if (global.frames.length === 0 && context === d) {
+        return global;
       } else {
-        for (var i in top.frames) {
-          if (top.frames[i].document === d) {
-            return top.frames[i];
+        for (var i in global.frames) {
+          if (global.frames[i].document === d) {
+            return global.frames[i];
           }
         }
       }
-      return top;
-    },
+      return global;
+    } :
+    function() { return global; },
 
   // fix IE event properties to comply with w3c standards
   fixEvent =
