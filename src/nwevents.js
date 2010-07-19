@@ -821,10 +821,10 @@
       if (k !== false) unregister(Registers, type, k);
     },
 
-  // publish an event on to registered subscribers
+  // publish an event to registered subscribers
   publish =
     function(object, type, data, capture, options) {
-      var i, event, list = Registers[type];
+      var i, l, event, list = Registers[type];
       if (list) {
         for (i = 0, l = list.calls.length; l > i; i++) {
           event = synthesize(object, type, list.parms[i], options);
@@ -1300,8 +1300,8 @@
             }
           }
         } else {
-          // a selector matcher element
-          if (typeof selector == 'element') {
+          // a selector matcher object
+          if (typeof selector == 'object') {
             // match on property/values
             for (j in selector) {
               if (j == 'className') {
