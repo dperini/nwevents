@@ -736,7 +736,7 @@
           options.ctrlKey || false, options.altKey || false, options.shiftKey || false, options.metaKey || false,
           options.button || 0, options.relatedTarget || null);
 
-      } else if (SUPPORT_KEYBOARD_EVENTS || SUPPORT_KEY_EVENTS && Keyboard_Events[type]) {
+      } else if ((SUPPORT_KEYBOARD_EVENTS || SUPPORT_KEY_EVENTS) && Keyboard_Events[type]) {
 
         event = d.createEvent(KEYBOARD_EVENT + KEYBOARD_FIX);
         event['init' + KEYBOARD_EVENT](type,
