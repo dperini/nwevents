@@ -7,7 +7,7 @@
  * Author: Diego Perini <diego.perini at gmail com>
  * Version: 1.2.4beta
  * Created: 20051016
- * Release: 20100314
+ * Release: 20100720
  *
  * License:
  *  http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -173,7 +173,29 @@
 
   isEventSupported = W3C_MODEL ?
     function(type, element) {
-      return true;
+
+      if (typeof supportedEvents[type] != 'undefined') {
+        return supportedEvents[type];
+      }
+
+      function handler(e) {
+        if (Object.prototype.toString.call(e) != '[object Event]') {
+          supportedEvents[type] = true;
+        }
+        element.removeEventListener(type, handler, true);
+      }
+
+      element || (element = testTarget);
+
+      supportedEvents[type] = false;
+
+      try {
+        element.addEventListener(type, handler, true);
+        dispatch(element, type, false);
+      } catch (e) { }
+
+      return supportedEvents[type];
+
     } : MSIE_MODEL ?
     function(type, element) {
 
@@ -181,14 +203,17 @@
         return supportedEvents[type];
       }
 
+      element || (element = testTarget);
+
       try {
-        (element || testTarget).fireEvent('on' + type);
+        element.fireEvent('on' + type);
         supportedEvents[type] = true;
       } catch (e) {
         supportedEvents[type] = false;
       }
 
       return supportedEvents[type];
+
     } :
     function () { return false; },
 
