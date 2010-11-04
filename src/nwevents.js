@@ -748,7 +748,8 @@
   dispatch = W3C_MODEL ?
     // W3C event model
     function(element, type, capture, options) {
-      var event, d = getDocument(element), view = getWindow(d).defaultView;
+
+      var event, d = getDocument(element), view = d.defaultView;
 
       options || (options = { });
 
