@@ -7,7 +7,7 @@
  * Author: Diego Perini <diego.perini at gmail com>
  * Version: 1.2.4beta
  * Created: 20051016
- * Release: 20100720
+ * Release: 20110202
  *
  * License:
  *  http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -247,24 +247,24 @@
 
   triggerEnable = W3C_MODEL ?
     function(enable) {
-      triggerSet();
       if ((triggerEnabled = !!enable)) {
         triggerTarget.addEventListener(TRIGGER_EVENT, triggerExec, false);
       } else {
         triggerTarget.removeEventListener(TRIGGER_EVENT, triggerExec, false);
       }
+      triggerSet(); 
     } : MSIE_MODEL ?
     function(enable) {
-      triggerSet();
       if ((triggerEnabled = !!enable)) {
         triggerTarget.attachEvent(TRIGGER_EVENT, triggerExec);
       } else {
         triggerTarget.detachEvent(TRIGGER_EVENT, triggerExec);
       }
+      triggerSet();
     } :
     function(enable) {
-      triggerSet();
       triggerEnabled = !!enable;
+      triggerSet();
     },
 
   triggerExec =
@@ -1213,7 +1213,7 @@
 
   // initialize context execution
   if (typeof trigger == 'function') {
-    triggerEnable(false);
+    triggerEnable(true);
   }
 
   // initialize global ready event
