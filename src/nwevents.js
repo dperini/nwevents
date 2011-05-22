@@ -421,9 +421,8 @@
   // process listeners chain for event type
   processListeners =
     function(event) {
-      var i, l, result = true,
-        items, calls, parms, phase,
-        type = event.type, valid;
+      var i, l, items, calls, parms, phase, valid,
+      done = false, result = true, type = event.type;
 
       if (Listeners[type] && Listeners[type].items) {
 
@@ -463,13 +462,12 @@
                 }
                 break;
               case AT_TARGET:
-                // maybe paranoid but helped spot bugs
-                // TODO: remove all AT_TARGET case :-)
-                if (typeof parms[i] === 'boolean') {
+                if (!done && (done = true)) {
                   valid = true;
                 }
                 break;
-              // Safari load events have eventPhase == 0
+              // Safari 4.x load events
+              // may have eventPhase == 0
               default:
                 valid = true;
                 break;
