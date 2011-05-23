@@ -19,6 +19,10 @@
 
   var version = 'nwevents-1.2.4beta',
 
+  Event = typeof exports == 'object' ? exports : (
+    (global.NW || (global.NW = { })) &&
+    (global.NW.Event || (global.NW.Event = { }))),
+
   // default to DOM2
   USE_DOM2 = true,
 
@@ -558,13 +562,13 @@
       element.attachEvent('on' + type, DOMEvents[type].wraps[key - 1]);
     } :
     function(element, type, handler, capture) {
-      Predefined['on' + type] = element['on' + type] || new Function();
+      var callback = Predefined['on' + type] = element['on' + type] || new Function();
       // use DOM0 event registration
       element['on' + type] = function(event) {
         var result;
         event || (event = fixEvent(this, event, capture));
         result = handler.call(this, event);
-        Predefined['on' + type].call(this, event);
+        callback.call(this, event);
         return result;
       };
     },
@@ -1217,60 +1221,54 @@
   // initialize global ready event
   contentLoaded(global, complete);
 
-  global.NW || (global.NW = { });
+  // controls the type of registration
+  // for event listeners (DOM0 / DOM2)
+  Event.USE_DOM2 = USE_DOM2;
 
-  NW.Event || (NW.Event = {
+  // exposed event collections
+  Event.Registers = Registers;
+  Event.Delegates = Delegates;
+  Event.Listeners = Listeners;
+  Event.DOMEvents = DOMEvents;
 
-    // controls the type of registration
-    // for event listeners (DOM0 / DOM2)
-    USE_DOM2: USE_DOM2,
+  // exposed event methods
+  Event.stop = stop;
+  Event.ready = ready;
 
-    // exposed event collections
-    Registers: Registers,
-    Delegates: Delegates,
-    Listeners: Listeners,
-    DOMEvents: DOMEvents,
+  Event.notify = notify;
+  Event.publish = publish;
+  Event.dispatch = dispatch;
 
-    // exposed event methods
-    stop: stop,
-    ready: ready,
+  Event.set = set;
+  Event.append = append;
+  Event.listen = listen;
+  Event.delegate = delegate;
+  Event.subscribe = subscribe;
 
-    notify: notify,
-    publish: publish,
-    dispatch: dispatch,
+  Event.unset = unset;
+  Event.remove = remove;
+  Event.unlisten = unlisten;
+  Event.undelegate = undelegate;
+  Event.unsubscribe = unsubscribe;
 
-    set: set,
-    append: append,
-    listen: listen,
-    delegate: delegate,
-    subscribe: subscribe,
+  Event.contentLoaded = contentLoaded;
+  Event.getRegistered = getRegistered;
 
-    unset: unset,
-    remove: remove,
-    unlisten: unlisten,
-    undelegate: undelegate,
-    unsubscribe: unsubscribe,
+  // back compat aliases
+  Event.appendHandler = set;
+  Event.removeHandler = unset;
 
-    contentLoaded: contentLoaded,
-    getRegistered: getRegistered,
+  Event.appendListener = listen;
+  Event.removeListener = unlisten;
 
-    // back compat aliases
-    appendHandler: set,
-    removeHandler: unset,
+  Event.appendDelegate = delegate;
+  Event.removeDelegate = undelegate;
 
-    appendListener: listen,
-    removeListener: unlisten,
+  // helpers and debugging functions
+  Event.isEventSupported = isEventSupported;
 
-    appendDelegate: delegate,
-    removeDelegate: undelegate,
-
-    // helpers and debugging functions
-    isEventSupported: isEventSupported,
-
-    enablePropagation: enablePropagation,
-    disablePropagation: disablePropagation
-
-  });
+  Event.enablePropagation = enablePropagation;
+  Event.disablePropagation = disablePropagation;
 
 })(this);
 
