@@ -256,7 +256,7 @@
       } else {
         triggerTarget.removeEventListener(TRIGGER_EVENT, triggerExec, false);
       }
-      triggerSet(); 
+      triggerSet();
     } : MSIE_MODEL ?
     function(enable) {
       if ((triggerEnabled = !!enable)) {
@@ -684,24 +684,24 @@
 
   // append an event delegate
   delegate =
-    // with iframes pass a delegate parameter
-    // "delegate" defaults to documentElement
-    function(selector, type, handler, delegate) {
+    // delegated element defaults to document
+    // it is a required parameter with iframes
+    function(selector, type, handler, element) {
       var i, j, k, l, types;
       if (typeof selector == 'string') {
         types = type.split(' ');
-        delegate = delegate || context;
+        element = element || context;
         for (i = 0, l = types.length; i < l; i++) {
-          k = isRegistered(Delegates, selector, types[i], handler, delegate);
+          k = isRegistered(Delegates, selector, types[i], handler, element);
           if (k === false) {
-            register(Delegates, selector, types[i], handler, delegate);
+            register(Delegates, selector, types[i], handler, element);
             if (Delegates[types[i]].items.length === 1) {
-              listen(delegate, types[i], processDelegates, true);
+              listen(element, types[i], processDelegates, true);
             }
           }
         }
       } else {
-        // a hash of "rules" containing selector-event-handler
+        // hash of "rules" containing selector-event-handler
         for (i in selector) {
           if (typeof i == 'string') {
             for (j in selector[i]) {
@@ -715,18 +715,18 @@
 
   // remove an event delegate
   undelegate =
-    // with iframes pass a delegate parameter
-    // "delegate" defaults to documentElement
-    function(selector, type, handler, delegate) {
+    // delegated element defaults to document
+    // it is a required parameter with iframes
+    function(selector, type, handler, element) {
       var i, j, k, l, types;
       if (typeof type == 'string') {
         types = type.split(' ');
-        delegate = delegate || context;
+        element = element || context;
         for (i = 0, l = types.length; i < l; i++) {
-          k = isRegistered(Delegates, selector, types[i], handler, delegate);
+          k = isRegistered(Delegates, selector, types[i], handler, element);
           if (k !== false) {
             if (Delegates[types[i]].items.length === 1) {
-              unlisten(delegate, types[i], processDelegates, true);
+              unlisten(element, types[i], processDelegates, true);
             }
             unregister(Delegates, types[i], k);
           }
