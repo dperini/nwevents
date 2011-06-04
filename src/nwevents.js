@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 Diego Perini
+ * Copyright (C) 2005-2011 Diego Perini
  * All rights reserved.
  *
  * nwevents.js - Javascript Event Manager
@@ -7,7 +7,7 @@
  * Author: Diego Perini <diego.perini at gmail com>
  * Version: 1.2.4beta
  * Created: 20051016
- * Release: 20110202
+ * Release: 20110601
  *
  * License:
  *  http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -31,9 +31,6 @@
 
   // event collections and predefined DOM0 register
   DOMEvents = { }, Delegates = { }, Listeners = { }, Predefined = { },
-
-  // event subscriptions register
-  Registers = { },
 
   // initial script load context
   viewport = global,
@@ -220,84 +217,6 @@
 
     } :
     function () { return false; },
-
-  /* =========================== TRIGGER HANDLERS =========================== */
-
-  TRIGGER_EVENT = 'onhelp',
-
-  trigger = function() { },
-  triggerArguments = null,
-  triggerCallback = null,
-  triggerEnabled = false,
-
-  triggerTarget = context.createDocumentFragment &&
-    context.createDocumentFragment().
-      appendChild(context.createElement('div')),
-
-  triggerEvent = W3C_MODEL ?
-    (function() {
-      var event = context.createEvent('Event');
-      event.initEvent(TRIGGER_EVENT, true, true);
-      return event;
-    })() : MSIE_MODEL ?
-    (function() {
-      var event = context.createEventObject();
-      event.type = 'onhelp';
-      event.bubbles = true;
-      event.cancelable = true;
-      return event;
-    })() :
-    null,
-
-  triggerEnable = W3C_MODEL ?
-    function(enable) {
-      if ((triggerEnabled = !!enable)) {
-        triggerTarget.addEventListener(TRIGGER_EVENT, triggerExec, false);
-      } else {
-        triggerTarget.removeEventListener(TRIGGER_EVENT, triggerExec, false);
-      }
-      triggerSet();
-    } : MSIE_MODEL ?
-    function(enable) {
-      if ((triggerEnabled = !!enable)) {
-        triggerTarget.attachEvent(TRIGGER_EVENT, triggerExec);
-      } else {
-        triggerTarget.detachEvent(TRIGGER_EVENT, triggerExec);
-      }
-      triggerSet();
-    } :
-    function(enable) {
-      triggerEnabled = !!enable;
-      triggerSet();
-    },
-
-  triggerExec =
-    function() {
-      if (typeof triggerCallback == 'function') {
-        triggerCallback.call(triggerArguments[0], triggerArguments[1]);
-      }
-    },
-
-  triggerSet =
-    function() {
-      trigger = W3C_MODEL && triggerEnabled ?
-        function(callback, args) {
-          triggerArguments = args;
-          triggerCallback = callback;
-          triggerEvent.initEvent(TRIGGER_EVENT, true, true);
-          triggerTarget.dispatchEvent(triggerEvent);
-        } : MSIE_MODEL && triggerEnabled ?
-        function(callback, args) {
-          triggerArguments = args;
-          triggerCallback = callback;
-          triggerEvent.bubbles = true;
-          triggerEvent.cancelable = true;
-          triggerTarget.fireEvent(TRIGGER_EVENT, triggerEvent);
-        } :
-        function(callback, args) {
-          callback.call(args[0], args[1]);
-        };
-    },
 
   /* ============================ UTILITY METHODS =========================== */
 
@@ -834,39 +753,7 @@
       return (propagatePhase(element, type, true) &&
         propagatePhase(element, type, false));
     },
-
-  // register a subscriber for event publication
-  subscribe =
-    function(object, type, callback, capture, options) {
-      var k = isRegistered(Registers, object, type, callback, capture);
-      if (k === false) register(Registers, object, type, callback, capture);
-    },
-
-  // unregister a subscriber from event publication
-  unsubscribe =
-    function(object, type, callback, capture, options) {
-      var k = isRegistered(Registers, object, type, callback, capture);
-      if (k !== false) unregister(Registers, type, k);
-    },
-
-  // publish an event to registered subscribers
-  publish =
-    function(object, type, data, capture, options) {
-      var i, l, event, list = Registers[type];
-      if (list) {
-        for (i = 0, l = list.calls.length; l > i; i++) {
-          event = synthesize(object, type, list.parms[i], options);
-          if (data) event.data = data;
-          event.currentTarget = list.items[i];
-          if (typeof trigger == 'function') {
-            trigger(list.calls[i], [object, event]);
-          } else {
-            list.calls[i].call(object, event);
-          }
-        }
-      }
-    },
-
+ 
   /* =========================== EVENT PROPAGATION ========================== */
 
   //
@@ -1213,20 +1100,18 @@
     enablePropagation(context);
   }
 
-  // initialize context execution
-  if (typeof trigger == 'function') {
-    triggerEnable(true);
-  }
-
   // initialize global ready event
   contentLoaded(global, complete);
+
+  // detected event model, ms or w3c
+  Event.W3C_MODEL = W3C_MODEL;
+  Event.MSIE_MODEL = MSIE_MODEL;
 
   // controls the type of registration
   // for event listeners (DOM0 / DOM2)
   Event.USE_DOM2 = USE_DOM2;
 
   // exposed event collections
-  Event.Registers = Registers;
   Event.Delegates = Delegates;
   Event.Listeners = Listeners;
   Event.DOMEvents = DOMEvents;
@@ -1235,24 +1120,30 @@
   Event.stop = stop;
   Event.ready = ready;
 
+  Event.set = set;
+  Event.unset = unset;
+
+  Event.append = append;
+  Event.remove = remove;
+
+  Event.register = register;
+  Event.unregister = unregister;
+
+  Event.listen = listen;
+  Event.unlisten = unlisten;
+
+  Event.delegate = delegate;
+  Event.undelegate = undelegate;
+
   Event.notify = notify;
-  Event.publish = publish;
   Event.dispatch = dispatch;
 
-  Event.set = set;
-  Event.append = append;
-  Event.listen = listen;
-  Event.delegate = delegate;
-  Event.subscribe = subscribe;
+  Event.synthesize = synthesize;
 
-  Event.unset = unset;
-  Event.remove = remove;
-  Event.unlisten = unlisten;
-  Event.undelegate = undelegate;
-  Event.unsubscribe = unsubscribe;
+  Event.isRegistered = isRegistered;
+  Event.getRegistered = getRegistered;
 
   Event.contentLoaded = contentLoaded;
-  Event.getRegistered = getRegistered;
 
   // back compat aliases
   Event.appendHandler = set;
