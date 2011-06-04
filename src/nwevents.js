@@ -950,32 +950,65 @@
 
   /* ========================== DOM CONTENT LOADED ========================== */
 
-  //
-  // available loading notification events:
-  //
-  // HTML5 + DOM2 FF/Opera/Safari/K:
-  //   DOMContentLoaded, DOMFrameContentLoaded, onload
-  //
-  // MS Internet Explorer 6, 7 and 8:
-  //   readyState, onreadystatchange, onload
-  //
-  // DOM0/1 and inline:
-  //   onload
-  //
-  // we use a bad browser sniff just to find out the best
-  // implementation/fallback for each of the old browsers
-  // to support the standard HTML5 DOMContentLoaded event
-  // http://www.whatwg.org/specs/web-apps/current-work/#the-end
-  //
+  /*!
+   * contentloaded.js
+   *
+   * Author: Diego Perini (diego.perini at gmail.com)
+   * Summary: cross-browser wrapper for DOMContentLoaded
+   * Updated: 20101020
+   * License: MIT
+   * Version: 1.2
+   *
+   * URL:
+   * http://javascript.nwbox.com/ContentLoaded/
+   * http://javascript.nwbox.com/ContentLoaded/MIT-LICENSE
+   *
+   */
+
+  // @win window reference
+  // @fn function reference
+  contentLoaded = function(win, fn) {
+
+    var done = false, top = true,
+
+    doc = win.document, root = doc.documentElement,
+
+    add = doc.addEventListener ? 'addEventListener' : 'attachEvent',
+    rem = doc.addEventListener ? 'removeEventListener' : 'detachEvent',
+    pre = doc.addEventListener ? '' : 'on',
+
+    init = function(e) {
+      if (e.type == 'readystatechange' && doc.readyState != 'complete') return;
+      (e.type == 'load' ? win : doc)[rem](pre + e.type, init, false);
+      if (!done && (done = true)) fn.call(win, e.type || e);
+    },
+
+    poll = function() {
+      try { root.doScroll('left'); } catch(e) { setTimeout(poll, 50); return; }
+      init('poll');
+    };
+
+    if (doc.readyState == 'complete') fn.call(win, 'lazy');
+    else {
+      if (doc.createEventObject && root.doScroll) {
+        try { top = !win.frameElement; } catch(e) { }
+        if (top) poll();
+      }
+      doc[add](pre + 'DOMContentLoaded', init, false);
+      doc[add](pre + 'readystatechange', init, false);
+      win[add](pre + 'load', init, false);
+    }
+
+  },
 
   isReady = false,
 
   readyHandlers = new EventCollection,
 
   ready =
-    function(host, callback, scope) {
+    function(host, callback) {
       if (isReady) {
-        callback.call(scope);
+        callback.call('ready');
       } else {
         var k = isRegistered(readyHandlers, host, 'ready', callback, null);
         if (k === false) {
@@ -987,106 +1020,14 @@
     },
 
   complete =
-    function(host, callback, scope) {
+    function(event) {
       isReady = true;
       if (readyHandlers['ready'] && readyHandlers['ready'].items) {
         var i, length = readyHandlers['ready'].items.length;
         for (i = 0; length > i; ++i) {
-          readyHandlers['ready'].calls[i].call(scope);
+          readyHandlers['ready'].calls[i](event);
         }
       }
-    },
-
-  // Cross-browser wrapper for DOMContentLoaded
-  // http://javascript.nwbox.com/ContentLoaded/ +
-  // http://javascript.nwbox.com/IEContentLoaded/
-  contentLoaded = W3C_MODEL || MSIE_MODEL ?
-    function(host, callback, scope) {
-
-      var d = host.document,
-        done = false, size = 0,
-        root = d.documentElement,
-        W3Type = 'DOMContentLoaded',
-        MSType = 'onreadystatechange';
-
-      function init(event) {
-        if (!done) {
-          done = true;
-          callback.call(scope, event);
-        }
-      }
-
-      // W3C Event model
-      if (d.addEventListener) {
-
-        // browsers having native DOMContentLoaded
-        function DOMContentLoaded(event) {
-          d.removeEventListener(event.type, DOMContentLoaded, false);
-          init(event);
-        }
-        d.addEventListener(W3Type, DOMContentLoaded, false);
-
-        // onload fall back for older browsers
-        host.addEventListener('load', DOMContentLoaded, false);
-
-      // MSIE Event model (all versions)
-      } else if (
-        isNative(d, 'createEventObject') &&
-        isNative(d, 'attachEvent') &&
-        isNative(d, 'detachEvent')) {
-
-        if (isNative(root, 'doScroll')) {
-
-          function IEContentLoaded(event) {
-            d.detachEvent(MSType, IEContentLoaded);
-            function poll() {
-              try {
-                // throws errors until after ondocumentready
-                root.doScroll('left');
-                size = root.outerHTML.length;
-                if (size * 1.03 < d.fileSize * 1) {
-                  return !done && setTimeout(poll, 50);
-                }
-              } catch (e) {
-                return !done && setTimeout(poll, 50);
-              }
-              init({ type: 'poll' });
-              return done;
-            }
-            poll();
-          }
-
-          // start polling after first readyStateChange event
-          d.attachEvent(MSType, IEContentLoaded);
-
-        }
-
-        function IEReadyState(event) {
-          if (d.readyState == 'complete') {
-            d.detachEvent('on' + event.type, IEReadyState);
-            init(event);
-          }
-        }
-
-        d.attachEvent(MSType, IEReadyState);
-        host.attachEvent('onload', IEReadyState);
-
-      // fallback to last resort for older browsers
-      } else {
-
-        // from Simon Willison
-        var oldonload = host.onload;
-        host.onload = function (event) {
-          init(event || host.event);
-          if (typeof oldonload == 'function') {
-            oldonload(event || host.event);
-          }
-        };
-
-      }
-    } :
-    function(host, callback, scope) {
-      callback && callback.call(scope, { });
     };
 
   // inititalize the activeElement
@@ -1267,6 +1208,7 @@
         }
       }
     }
+
     // boolean true/false
     return results.join('|').indexOf('false') < 0;
   };
