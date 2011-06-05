@@ -1178,7 +1178,7 @@
         // use native matchesSelector where available
         return element[NATIVE_MATCHES_SELECTOR](selector);
       }
-      return false;
+      return matched;
     } else {
       // a selector matcher object
       if (typeof selector == 'object') {
