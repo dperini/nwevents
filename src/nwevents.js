@@ -170,53 +170,41 @@
     context.createDocumentFragment().
       appendChild(context.createElement('div')),
 
-  supportedEvents = { },
+  special = /^onload|onunload|onbeforeunload|oninput$/,
 
-  isEventSupported = W3C_MODEL ?
+  supported = { },
+
+  isSupported =
     function(type, element) {
-
-      if (typeof supportedEvents[type] != 'undefined') {
-        return supportedEvents[type];
+      var handler;
+      type = 'on' + type;
+      if (typeof supported[type] != 'undefined') {
+        return supported[type];
+      } else {
+        supported[type] = false;
       }
-
-      function handler(e) {
-        if (Object.prototype.toString.call(e) != '[object Event]') {
-          supportedEvents[type] = true;
+      element || (element = testTarget);
+      if (type in element) {
+        supported[type] = true;
+      } else if (special.test(type)) {
+        if (type in global) {
+          supported[type] = true;
+        } else {
+          handler = global[type];
+          context.createElement('body').setAttribute(type, 'return');
+          if (typeof global[type] == 'function') {
+            supported[type] = true;
+          }
+          global[type] = handler;
         }
-        element.removeEventListener(type, handler, true);
+      } else {
+        element.setAttribute(type, 'return');
+        if (typeof element[type] == 'function') {
+          supported[type] = true;
+        }
       }
-
-      element || (element = testTarget);
-
-      supportedEvents[type] = false;
-
-      try {
-        element.addEventListener(type, handler, true);
-        dispatch(element, type, false);
-      } catch (e) { }
-
-      return supportedEvents[type];
-
-    } : MSIE_MODEL ?
-    function(type, element) {
-
-      if (typeof supportedEvents[type] != 'undefined') {
-        return supportedEvents[type];
-      }
-
-      element || (element = testTarget);
-
-      try {
-        element.fireEvent('on' + type);
-        supportedEvents[type] = true;
-      } catch (e) {
-        supportedEvents[type] = false;
-      }
-
-      return supportedEvents[type];
-
-    } :
-    function () { return false; },
+      return supported[type];
+    },
 
   /* ============================ UTILITY METHODS =========================== */
 
@@ -721,7 +709,7 @@
     // IE event model
     function(element, type, capture, options) {
 
-      if (isEventSupported(type)) {
+      if (isSupported(type)) {
         var event = getDocument(element).createEventObject();
         event.type = type;
         event.target = element;
@@ -1097,7 +1085,7 @@
   Event.removeDelegate = undelegate;
 
   // helpers and debugging functions
-  Event.isEventSupported = isEventSupported;
+  Event.isSupported = isSupported;
 
   Event.enablePropagation = enablePropagation;
   Event.disablePropagation = disablePropagation;
