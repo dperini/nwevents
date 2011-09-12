@@ -110,14 +110,14 @@
     },
 
   hasInterface = hasFeature('Events', '') ?
-    function (t) {
+    function(t) {
       try {
         return typeof context.createEvent(t)['init' + t] == 'function';
       } catch (e) {
         return false;
       }
     } :
-    function (t) {
+    function(t) {
       return false;
     },
 
@@ -839,7 +839,7 @@
         node = element, ancestors = [],
         event = synthesize(element, type, capture);
       // collect ancestors
-      while(node) {
+      while (node) {
         ancestors.push(node);
         node = node.parentNode;
       }
@@ -1179,12 +1179,12 @@
               matched = true;
             }
           } else if (j == 'nodeName' || j == 'tagName') {
-            // handle upper/lower case tagName
-            if (element.nodeName.toLowerCase() == selector[j].toLowerCase()) {
+            // handle upper/lower case tag names
+            if (element[j].toLowerCase() == selector[j].toLowerCase()) {
               matched = true;
             }
           } else if (References[j]) {
-            // handle matching other references
+            // handle matching nested objects references
             matched = Dom.match(element[j], selector[j]);
           } else {
             // handle matching other properties
