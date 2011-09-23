@@ -414,11 +414,13 @@
         // process chain in fifo order
         bubblingLoop:
         for (i = 0, l = items.length; l > i; i++) {
-          // if event.target matches one of the registered elements and
-          // if "this" element matches one of the registered delegates
+          // skip processing unregistered elements
+          if (parms[i] != this) continue;
+          // check element's ancestors up
+          // to the currentTarget ('this') 
           target = event.target;
           // bubble events up to parent nodes
-          while (target && target != this) {
+          while (target != this) {
             if (NW.Dom.match(target, items[i])) {
               // execute registered function in element scope
               if (calls[i].call(target, event) === false) {
@@ -602,7 +604,7 @@
           k = isRegistered(Delegates, selector, types[i], handler, element);
           if (k === false) {
             register(Delegates, selector, types[i], handler, element);
-            if (Delegates[types[i]].items.length === 1) {
+            if (getRegistered(selector, types[i], element, Delegates).length === 1) {
               listen(element, types[i], processDelegates, true);
             }
           }
@@ -612,7 +614,7 @@
         for (i in selector) {
           if (typeof i == 'string') {
             for (j in selector[i]) {
-              delegate(i, j, selector[i][j]);
+              delegate(i, j, selector[i][j], element);
             }
           }
         }
@@ -632,7 +634,7 @@
         for (i = 0, l = types.length; i < l; i++) {
           k = isRegistered(Delegates, selector, types[i], handler, element);
           if (k !== false) {
-            if (Delegates[types[i]].items.length === 1) {
+            if (getRegistered(selector, types[i], element, Delegates).length === 1) {
               unlisten(element, types[i], processDelegates, true);
             }
             unregister(Delegates, types[i], k);
@@ -643,7 +645,7 @@
         for (i in selector) {
           if (typeof i == 'string') {
             for (j in selector[i]) {
-              undelegate(i, j, selector[i][j]);
+              undelegate(i, j, selector[i][j], element);
             }
           }
         }
