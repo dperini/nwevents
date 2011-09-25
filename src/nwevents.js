@@ -19,7 +19,7 @@
 
   var version = 'nwevents-1.2.4beta',
 
-  Event = typeof exports == 'object' ? exports : (
+  Event = typeof exports === 'object' ? exports : (
     (global.NW || (global.NW = { })) &&
     (global.NW.Event || (global.NW.Event = { }))),
 
@@ -112,7 +112,7 @@
   hasInterface = hasFeature('Events', '') ?
     function(t) {
       try {
-        return typeof context.createEvent(t)['init' + t] == 'function';
+        return typeof context.createEvent(t)['init' + t] === 'function';
       } catch (e) {
         return false;
       }
@@ -126,7 +126,7 @@
     var s = (global.open + '').replace(/open/g, '');
     return function(object, method) {
       var m = object ? object[method] : false, r = new RegExp(method, 'g');
-      return !!(m && typeof m != 'string' && s === (m + '').replace(r, ''));
+      return !!(m && typeof m !== 'string' && s === (m + '').replace(r, ''));
     };
   })(),
 
@@ -157,7 +157,7 @@
 
   // non standard Firefox KeyEvent
   SUPPORT_KEY_EVENTS = 'KeyEvent' in global &&
-    typeof KeyEvent.prototype.initEvent == 'function',
+    typeof KeyEvent.prototype.initEvent === 'function',
 
   KEYBOARD_FIX = SUPPORT_KEYBOARD_EVENTS ? '' : 's',
 
@@ -178,7 +178,7 @@
     function(type, element) {
       var handler;
       type = 'on' + type;
-      if (typeof supported[type] != 'undefined') {
+      if (typeof supported[type] !== 'undefined') {
         return supported[type];
       } else {
         supported[type] = false;
@@ -192,14 +192,14 @@
         } else {
           handler = global[type];
           context.createElement('body').setAttribute(type, 'return');
-          if (typeof global[type] == 'function') {
+          if (typeof global[type] === 'function') {
             supported[type] = true;
           }
           global[type] = handler;
         }
       } else {
         element.setAttribute(type, 'return');
-        if (typeof element[type] == 'function') {
+        if (typeof element[type] === 'function') {
           supported[type] = true;
         }
       }
@@ -254,9 +254,9 @@
       event.eventPhase = capture ? CAPTURING_PHASE : BUBBLING_PHASE;
       // related element (routing of the event)
       event.relatedTarget =
-        event[(event.target == event.fromElement ? 'to' : 'from') + 'Element'];
+        event[(event.target === event.fromElement ? 'to' : 'from') + 'Element'];
       // set time event was fixed
-      event.timeStamp=+new Date();
+      event.timeStamp = +new Date;
       return event;
     },
 
@@ -294,7 +294,7 @@
     function(registry, element, type, handler, capture) {
       var i, l, found = false;
       if (registry[type] && registry[type].items) {
-        for (i = 0, l = registry[type].items.length; l > i; i++) {
+        for (i = 0, l = registry[type].items.length; l > i; ++i) {
           if (
             registry[type].items[i] === element &&
             registry[type].calls[i] === handler &&
@@ -316,9 +316,9 @@
       object || (object = '*');
       register || (register = Listeners);
       for (i in register) {
-        if (type.indexOf(i) > -1 || type == '*') {
+        if (type.indexOf(i) > -1 || type === '*') {
           for (j = 0, l = register[i].items.length; j < l; j++) {
-            if (object == '*' ||
+            if (object === '*' ||
               (register[i].items[j] === object &&
               register[i].parms[j] === capture)) {
               results.push(register[i].calls[j]);
@@ -346,7 +346,7 @@
 
         // only AT_TARGET event.target === event.currentTarget
         if (phase !== AT_TARGET && event.target === this) {
-          if (event.propagated && phase == CAPTURING_PHASE) return true;
+          if (event.propagated && phase === CAPTURING_PHASE) return true;
           phase = event.eventPhase = AT_TARGET;
         }
 
@@ -358,7 +358,7 @@
         parms = Listeners[type].parms.slice();
 
         // process chain in fifo order
-        for (i = 0, l = items.length; l > i; i++) {
+        for (i = 0, l = items.length; l > i; ++i) {
           valid = false;
           if (items[i] === this) {
             switch (phase) {
@@ -378,7 +378,7 @@
                 }
                 break;
               // Safari 4.x load events
-              // may have eventPhase == 0
+              // may have eventPhase === 0
               default:
                 valid = true;
                 break;
@@ -413,14 +413,14 @@
 
         // process chain in fifo order
         bubblingLoop:
-        for (i = 0, l = items.length; l > i; i++) {
+        for (i = 0, l = items.length; l > i; ++i) {
           // skip processing unregistered elements
-          if (parms[i] != this) continue;
+          if (parms[i] !== this) continue;
           // check element's ancestors up
           // to the currentTarget ('this') 
           target = event.target;
           // bubble events up to parent nodes
-          while (target != this) {
+          while (target && target !== this) {
             if (NW.Dom.match(target, items[i])) {
               // execute registered function in element scope
               if (calls[i].call(target, event) === false) {
@@ -503,9 +503,9 @@
   set =
     function(element, type, handler, capture) {
       var i, k, l, types;
-      if (typeof type == 'string') {
+      if (typeof type === 'string') {
         types = type.split(' ');
-        for (i = 0, l = types.length; i < l; i++) {
+        for (i = 0, l = types.length; l > i; ++i) {
           k = isRegistered(DOMEvents, element, types[i], handler, capture);
           if (k === false) {
             register(DOMEvents, element, types[i], handler, capture);
@@ -525,9 +525,9 @@
   unset =
     function(element, type, handler, capture) {
       var i, k, l, types;
-      if (typeof type == 'string') {
+      if (typeof type === 'string') {
         types = type.split(' ');
-        for (i = 0, l = types.length; i < l; i++) {
+        for (i = 0, l = types.length; l > i; ++i) {
           k = isRegistered(DOMEvents, element, types[i], handler, capture);
           if (k !== false) {
             remove(element, types[i], DOMEvents[types[i]].wraps[k], capture, k);
@@ -547,9 +547,9 @@
   listen =
     function(element, type, handler, capture) {
       var i, k, l, types;
-      if (typeof type == 'string') {
+      if (typeof type === 'string') {
         types = type.split(' ');
-        for (i = 0, l = types.length; i < l; i++) {
+        for (i = 0, l = types.length; l > i; ++i) {
           k = isRegistered(Listeners, element, types[i], handler, capture);
           if (k === false) {
             register(Listeners, element, types[i], handler, capture);
@@ -571,9 +571,9 @@
   unlisten =
     function(element, type, handler, capture) {
       var i, k, l, types;
-      if (typeof type == 'string') {
+      if (typeof type === 'string') {
         types = type.split(' ');
-        for (i = 0, l = types.length; i < l; i++) {
+        for (i = 0, l = types.length; l > i; ++i) {
           k = isRegistered(Listeners, element, types[i], handler, capture);
           if (k !== false) {
             if (getRegistered(element, types[i], capture, Listeners).length === 1) {
@@ -597,10 +597,10 @@
     // it is a required parameter with iframes
     function(selector, type, handler, element) {
       var i, j, k, l, types;
-      if (typeof selector == 'string') {
+      if (typeof selector === 'string') {
         types = type.split(' ');
         element = element || context;
-        for (i = 0, l = types.length; i < l; i++) {
+        for (i = 0, l = types.length; l > i; ++i) {
           k = isRegistered(Delegates, selector, types[i], handler, element);
           if (k === false) {
             register(Delegates, selector, types[i], handler, element);
@@ -612,7 +612,7 @@
       } else {
         // hash of "rules" containing selector-event-handler
         for (i in selector) {
-          if (typeof i == 'string') {
+          if (typeof i === 'string') {
             for (j in selector[i]) {
               delegate(i, j, selector[i][j], element);
             }
@@ -628,10 +628,10 @@
     // it is a required parameter with iframes
     function(selector, type, handler, element) {
       var i, j, k, l, types;
-      if (typeof type == 'string') {
+      if (typeof type === 'string') {
         types = type.split(' ');
         element = element || context;
-        for (i = 0, l = types.length; i < l; i++) {
+        for (i = 0, l = types.length; l > i; ++i) {
           k = isRegistered(Delegates, selector, types[i], handler, element);
           if (k !== false) {
             if (getRegistered(selector, types[i], element, Delegates).length === 1) {
@@ -643,7 +643,7 @@
       } else {
         // hash of "rules" containing selector-event-handler
         for (i in selector) {
-          if (typeof i == 'string') {
+          if (typeof i === 'string') {
             for (j in selector[i]) {
               undelegate(i, j, selector[i][j], element);
             }
@@ -737,13 +737,13 @@
   // notify registered listeners an event occurred
   notify =
     function(element, type, capture, options) {
-      if (typeof capture != 'undefined') {
+      if (typeof capture !== 'undefined') {
         return propagatePhase(element, type, !!capture);
       }
       return (propagatePhase(element, type, true) &&
         propagatePhase(element, type, false));
     },
- 
+
   /* =========================== EVENT PROPAGATION ========================== */
 
   //
@@ -801,10 +801,10 @@
         propagated: true,
         relatedTarget: null,
         currentTarget: element,
-        timeStamp: +new Date(),
         preventDefault: preventDefault,
         stopPropagation: stopPropagation,
-        eventPhase: capture ? CAPTURING_PHASE : BUBBLING_PHASE
+        eventPhase: capture ? CAPTURING_PHASE : BUBBLING_PHASE,
+        timeStamp: +new Date
       };
       for (var i in options) event[i] = options[i];
       return event;
@@ -848,7 +848,7 @@
       // capturing, reverse ancestors collection
       if (capture) ancestors.reverse();
       // execute registered handlers in fifo order
-      for (i = 0, l = ancestors.length; l > i; i++) {
+      for (i = 0, l = ancestors.length; l > i; ++i) {
         // set currentTarget to current ancestor
         event.currentTarget = ancestors[i];
         // set eventPhase to the requested phase
@@ -882,8 +882,8 @@
       var target = event.target, type = target.type,
         active = target.ownerDocument.activeElement;
       // handle activeElement on context document
-      if (target != active) {
-        if (!hasActive && target.nodeType == 1) {
+      if (target !== active) {
+        if (!hasActive && target.nodeType === 1) {
           target.ownerDocument.activeElement = target;
         }
       }
@@ -891,7 +891,7 @@
       if (type) {
         // keydown or mousedown on form elements
         if (/^(file|text|password)$/.test(type) &&
-          event.keyCode == 13 && target.form) {
+          event.keyCode === 13 && target.form) {
           type = 'submit';
           target = target.form;
         } else if (/^(select-(one|multi)|text|textarea)$/.test(type)) {
@@ -968,8 +968,8 @@
     pre = doc.addEventListener ? '' : 'on',
 
     init = function(e) {
-      if (e.type == 'readystatechange' && doc.readyState != 'complete') return;
-      (e.type == 'load' ? win : doc)[rem](pre + e.type, init, false);
+      if (e.type === 'readystatechange' && doc.readyState !== 'complete') return;
+      (e.type === 'load' ? win : doc)[rem](pre + e.type, init, false);
       if (!done && (done = true)) fn.call(win, e.type || e);
     },
 
@@ -978,7 +978,7 @@
       init('poll');
     };
 
-    if (doc.readyState == 'complete') fn.call(win, 'lazy');
+    if (doc.readyState === 'complete') fn.call(win, 'lazy');
     else {
       if (doc.createEventObject && root.doScroll) {
         try { top = !win.frameElement; } catch(e) { }
@@ -1102,7 +1102,7 @@
 
   var version = 'match-1.0',
 
-  Dom = typeof exports == 'object' ? exports : (
+  Dom = typeof exports === 'object' ? exports : (
     (global.NW || (global.NW = { })) &&
     (global.NW.Dom || (global.NW.Dom = { }))),
 
@@ -1148,7 +1148,7 @@
 
     d = element.ownerDocument || element;
 
-    if (typeof selector == 'string') {
+    if (typeof selector === 'string') {
       if (RE_SIMPLE_SELECTOR.test(selector)) {
         // use a simple selector match (id, tag, class)
         if (selector.match(Patterns.all)) {
@@ -1158,8 +1158,8 @@
           id = match ? match[1] : null;
           match = selector.match(Patterns.className);
           className = match ? match[1] : null;
-          if ((!id || id == element.id) &&
-            (!tagName || tagName == '*' || (new RegExp(tagName, 'i')).test(element.nodeName)) &&
+          if ((!id || id === element.id) &&
+            (!tagName || tagName === '*' || (new RegExp(tagName, 'i')).test(element.nodeName)) &&
             (!className || (' ' + element.className.replace(/\s+/g, ' ') + ' ').indexOf(' ' + className + ' ') > -1)) {
             matched = true;
           }
@@ -1171,18 +1171,18 @@
       return matched;
     } else {
       // a selector matcher object
-      if (typeof selector == 'object') {
+      if (typeof selector === 'object') {
         // match on property/values
         for (j in selector) {
           matched = false;
-          if (j == 'className') {
+          if (j === 'className') {
             // handle special className matching
             if ((' ' + element.className.replace(/\s+/g, ' ') + ' ').indexOf(' ' + selector[j] + ' ') > -1) {
               matched = true;
             }
-          } else if (j == 'nodeName' || j == 'tagName') {
+          } else if (j === 'nodeName' || j === 'tagName') {
             // handle upper/lower case tag names
-            if (element[j].toLowerCase() == selector[j].toLowerCase()) {
+            if (element[j].toLowerCase() === selector[j].toLowerCase()) {
               matched = true;
             }
           } else if (References[j]) {
