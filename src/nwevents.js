@@ -420,7 +420,7 @@
           // to the currentTarget ('this') 
           target = event.target;
           // bubble events up to parent nodes
-          while (target && target !== this) {
+          while (target && target.nodeType === 1) {
             if (NW.Dom.match(target, items[i])) {
               // execute registered function in element scope
               if (calls[i].call(target, event) === false) {
@@ -605,7 +605,7 @@
           if (k === false) {
             register(Delegates, selector, types[i], handler, element);
             if (getRegistered(selector, types[i], element, Delegates).length === 1) {
-              listen(element, types[i], processDelegates, true);
+              set(element, types[i], processDelegates, true);
             }
           }
         }
@@ -635,7 +635,7 @@
           k = isRegistered(Delegates, selector, types[i], handler, element);
           if (k !== false) {
             if (getRegistered(selector, types[i], element, Delegates).length === 1) {
-              unlisten(element, types[i], processDelegates, true);
+              unset(element, types[i], processDelegates, true);
             }
             unregister(Delegates, types[i], k);
           }
