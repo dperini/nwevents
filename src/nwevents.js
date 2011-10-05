@@ -428,6 +428,7 @@
                 break bubblingLoop;
               }
             }
+            if (target === this) break;
             target = target.parentNode;
           }
         }
@@ -490,7 +491,7 @@
     } : MSIE_MODEL && USE_DOM2 ?
     function(element, type, handler, capture, key) {
       // use MSIE event registration
-      element.detachEvent('on' + type, handler);
+      element.detachEvent('on' + type, DOMEvents[type].wraps[key]);
       DOMEvents[type].wraps.splice(key, 1);
     } :
     function(element, type, handler, capture) {
@@ -530,7 +531,7 @@
         for (i = 0, l = types.length; l > i; ++i) {
           k = isRegistered(DOMEvents, element, types[i], handler, capture);
           if (k !== false) {
-            remove(element, types[i], DOMEvents[types[i]].wraps[k], capture, k);
+            remove(element, types[i], handler, capture, k);
             unregister(DOMEvents, types[i], k);
           }
         }
@@ -604,7 +605,7 @@
           k = isRegistered(Delegates, selector, types[i], handler, element);
           if (k === false) {
             register(Delegates, selector, types[i], handler, element);
-            if (getRegistered(selector, types[i], element, Delegates).length === 1) {
+            if (getRegistered('*', types[i], element, Delegates).length === 1) {
               set(element, types[i], processDelegates, true);
             }
           }
@@ -634,7 +635,7 @@
         for (i = 0, l = types.length; l > i; ++i) {
           k = isRegistered(Delegates, selector, types[i], handler, element);
           if (k !== false) {
-            if (getRegistered(selector, types[i], element, Delegates).length === 1) {
+            if (getRegistered('*', types[i], element, Delegates).length === 1) {
               unset(element, types[i], processDelegates, true);
             }
             unregister(Delegates, types[i], k);
