@@ -606,7 +606,7 @@
           if (k === false) {
             register(Delegates, selector, types[i], handler, element);
             if (getRegistered('*', types[i], element, Delegates).length === 1) {
-              set(element, types[i], processDelegates, true);
+              listen(element, types[i], processDelegates, true);
             }
           }
         }
@@ -636,7 +636,7 @@
           k = isRegistered(Delegates, selector, types[i], handler, element);
           if (k !== false) {
             if (getRegistered('*', types[i], element, Delegates).length === 1) {
-              unset(element, types[i], processDelegates, true);
+              unlisten(element, types[i], processDelegates, true);
             }
             unregister(Delegates, types[i], k);
           }
