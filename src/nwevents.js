@@ -7,7 +7,7 @@
  * Author: Diego Perini <diego.perini at gmail com>
  * Version: 1.2.4beta
  * Created: 20051016
- * Release: 20110601
+ * Release: 20111010
  *
  * License:
  *  http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -310,18 +310,17 @@
   // list event handlers bound to
   // a given object for each type
   getRegistered =
-    function(object, type, capture, register) {
+    function(registry, element, type, capture) {
       var i, j, l, results = [ ];
       type || (type = '*');
-      object || (object = '*');
-      register || (register = Listeners);
-      for (i in register) {
+      element || (element = '*');
+      registry || (registry = Listeners);
+      for (i in registry) {
         if (type.indexOf(i) > -1 || type === '*') {
-          for (j = 0, l = register[i].items.length; j < l; j++) {
-            if (object === '*' ||
-              (register[i].items[j] === object &&
-              register[i].parms[j] === capture)) {
-              results.push(register[i].calls[j]);
+          for (j = 0, l = registry[i].items.length; j < l; j++) {
+            if (element === '*' || (element === registry[i].items[j] &&
+              (capture === '*' || capture === registry[i].parms[j]))) {
+              results.push(registry[i].calls[j]);
             }
           }
         }
@@ -415,13 +414,13 @@
         bubblingLoop:
         for (i = 0, l = items.length; l > i; ++i) {
           // skip processing unregistered elements
-          if (parms[i] !== this) continue;
+          if (items[i] !== this) continue;
           // check element's ancestors up
           // to the currentTarget ('this') 
           target = event.target;
           // bubble events up to parent nodes
           while (target && target.nodeType === 1) {
-            if (NW.Dom.match(target, items[i])) {
+            if (NW.Dom.match(target, parms[i])) {
               // execute registered function in element scope
               if (calls[i].call(target, event) === false) {
                 result = false;
@@ -441,7 +440,6 @@
   // register an event instance and its parameters
   register =
     function(registry, element, type, handler, capture) {
-      // registry is a reference to an EventCollection
       registry[type] || (registry[type] = new EventCollection);
       // append instance parameters to the registry
       registry[type].items.push(element);
@@ -451,23 +449,24 @@
 
   // unregister an event instance and its parameters
   unregister =
-    function(registry, type, key) {
+    function(registry, element, type, handler, capture, key) {
       // remove instance parameters from the registry
       registry[type].items.splice(key, 1);
       registry[type].calls.splice(key, 1);
       registry[type].parms.splice(key, 1);
+      registry[type].items.length === 0 && delete registry[type];
     },
 
   // lazy definition for addEventListener / attachEvent
   append = W3C_MODEL && USE_DOM2 ?
     function(element, type, handler, capture) {
       // use DOM2 event registration
-      element.addEventListener(type, handler, capture || false);
+      element.addEventListener(type, handler, !!capture);
     } : MSIE_MODEL && USE_DOM2 ?
     function(element, type, handler, capture) {
       // use MSIE event registration
       var key = DOMEvents[type].wraps.push(function(event) {
-        return handler.call(element, fixEvent(element, event, capture));
+        return handler.call(element, fixEvent(element, event, !!capture));
       });
       element.attachEvent('on' + type, DOMEvents[type].wraps[key - 1]);
     } :
@@ -476,7 +475,7 @@
       // use DOM0 event registration
       element['on' + type] = function(event) {
         var result;
-        event || (event = fixEvent(this, event, capture));
+        event || (event = fixEvent(this, event, !!capture));
         result = handler.call(this, event);
         callback.call(this, event);
         return result;
@@ -487,7 +486,7 @@
   remove = W3C_MODEL && USE_DOM2 ?
     function(element, type, handler, capture) {
       // use DOM2 event registration
-      element.removeEventListener(type, handler, capture || false);
+      element.removeEventListener(type, handler, !!capture);
     } : MSIE_MODEL && USE_DOM2 ?
     function(element, type, handler, capture, key) {
       // use MSIE event registration
@@ -507,9 +506,9 @@
       if (typeof type === 'string') {
         types = type.split(' ');
         for (i = 0, l = types.length; l > i; ++i) {
-          k = isRegistered(DOMEvents, element, types[i], handler, capture);
+          k = isRegistered(DOMEvents, element, types[i], handler, !!capture);
           if (k === false) {
-            register(DOMEvents, element, types[i], handler, capture);
+            register(DOMEvents, element, types[i], handler, !!capture);
             append(element, types[i], handler, capture);
           }
         }
@@ -529,10 +528,10 @@
       if (typeof type === 'string') {
         types = type.split(' ');
         for (i = 0, l = types.length; l > i; ++i) {
-          k = isRegistered(DOMEvents, element, types[i], handler, capture);
+          k = isRegistered(DOMEvents, element, types[i], handler, !!capture);
           if (k !== false) {
             remove(element, types[i], handler, capture, k);
-            unregister(DOMEvents, types[i], k);
+            unregister(DOMEvents, element, types[i], handler, !!capture, k);
           }
         }
       } else {
@@ -551,10 +550,10 @@
       if (typeof type === 'string') {
         types = type.split(' ');
         for (i = 0, l = types.length; l > i; ++i) {
-          k = isRegistered(Listeners, element, types[i], handler, capture);
+          k = isRegistered(Listeners, element, types[i], handler, !!capture);
           if (k === false) {
-            register(Listeners, element, types[i], handler, capture);
-            if (getRegistered(element, types[i], capture, Listeners).length === 1) {
+            register(Listeners, element, types[i], handler, !!capture);
+            if (getRegistered(Listeners, element, types[i], !!capture).length === 1) {
               set(element, types[i], processListeners, capture);
             }
           }
@@ -575,12 +574,12 @@
       if (typeof type === 'string') {
         types = type.split(' ');
         for (i = 0, l = types.length; l > i; ++i) {
-          k = isRegistered(Listeners, element, types[i], handler, capture);
+          k = isRegistered(Listeners, element, types[i], handler, !!capture);
           if (k !== false) {
-            if (getRegistered(element, types[i], capture, Listeners).length === 1) {
+            if (getRegistered(Listeners, element, types[i], !!capture).length === 1) {
               unset(element, types[i], processListeners, capture);
             }
-            unregister(Listeners, types[i], k);
+            unregister(Listeners, element, types[i], handler, !!capture, k);
           }
         }
       } else {
@@ -602,11 +601,11 @@
         types = type.split(' ');
         element = element || context;
         for (i = 0, l = types.length; l > i; ++i) {
-          k = isRegistered(Delegates, selector, types[i], handler, element);
+          k = isRegistered(Delegates, element, types[i], handler, selector);
           if (k === false) {
-            register(Delegates, selector, types[i], handler, element);
-            if (getRegistered('*', types[i], element, Delegates).length === 1) {
-              listen(element, types[i], processDelegates, true);
+            register(Delegates, element, types[i], handler, selector);
+            if (getRegistered(Delegates, element, types[i], '*').length === 1) {
+              listen(element, types[i], processDelegates, selector);
             }
           }
         }
@@ -633,12 +632,12 @@
         types = type.split(' ');
         element = element || context;
         for (i = 0, l = types.length; l > i; ++i) {
-          k = isRegistered(Delegates, selector, types[i], handler, element);
+          k = isRegistered(Delegates, element, types[i], handler, selector);
           if (k !== false) {
-            if (getRegistered('*', types[i], element, Delegates).length === 1) {
-              unlisten(element, types[i], processDelegates, true);
+            if (getRegistered(Delegates, element, types[i], '*').length === 1) {
+              unlisten(element, types[i], processDelegates, selector);
             }
-            unregister(Delegates, types[i], k);
+            unregister(Delegates, element, types[i], handler, selector, k);
           }
         }
       } else {
