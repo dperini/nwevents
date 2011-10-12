@@ -100,7 +100,7 @@
   unsubscribe =
     function(object, type, callback, capture, options) {
       var k = Event.isRegistered(Subscriptions, object, type, callback, capture);
-      if (k !== false) Event.unregister(Subscriptions, type, k);
+      if (k !== false) Event.unregister(Subscriptions, object, type, callback, capture, k);
     },
 
   // publish an event to registered subscribers
