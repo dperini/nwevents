@@ -416,7 +416,7 @@
           // skip processing unregistered elements
           if (items[i] !== this) continue;
           // check element's ancestors up
-          // to the currentTarget ('this') 
+          // to the currentTarget ('this')
           target = event.target;
           // bubble events up to parent nodes
           while (target && target.nodeType === 1) {
@@ -790,6 +790,10 @@
   Activation = context.addEventListener ?
     'focus blur' : 'beforeactivate beforedeactivate',
 
+  FormButton = RegExp('^(reset|submit)$'),
+  FormTextbox = RegExp('^(file|text|password)$'),
+  FormControl = RegExp('^(select-(one|multi)|checkbox|radio|textarea|file|text|password)$'),
+
   // create a synthetic event
   synthesize =
     function(element, type, capture, options) {
@@ -890,17 +894,14 @@
       // html form elements only
       if (type) {
         // keydown or mousedown on form elements
-        if (/^(file|text|password)$/.test(type) &&
-          event.keyCode === 13 && target.form) {
+        if (FormTextbox.test(type) && event.keyCode === 13 && target.form) {
+          target = target.form;
           type = 'submit';
+        } else if (FormButton.test(type) && target.form) {
           target = target.form;
-        } else if (/^(select-(one|multi)|text|textarea)$/.test(type)) {
+        } else if (FormControl.test(type)) {
           type = 'change';
-        } else if (/^(reset|submit)$/.test(type) && target.form) {
-          target = target.form;
         } else {
-          // action was on a form element but
-          // no extra processing is necessary
           return;
         }
         set(target, type, propagate, false);
