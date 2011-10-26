@@ -1103,6 +1103,9 @@
 // overwritten when loading the nwmatcher.js selector engine
 (function(global) {
 
+  // NW.Dom already defined, leave now
+  if (global.NW && global.NW.Dom) return;
+
   var version = 'match-1.0',
 
   Dom = typeof exports === 'object' ? exports : (
