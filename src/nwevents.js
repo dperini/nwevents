@@ -872,8 +872,8 @@
   propagateActivation =
     function(event) {
       var result = true, target = event.target;
-      // exit if the event was not fired on forms or controls
-      if (!(/^form$/i).test(target.nodeName) && !(target.type && 'form' in target)) return false;
+      // exit if the event was not fired on forms or on controls
+      if (!(/^form$/i).test(target.nodeName) && !(target.type && 'form' in target)) return true;
       result && (result = propagatePhase(target, ActivationMap[event.type], true));
       result && (result = propagatePhase(target, ActivationMap[event.type], false));
       result || (event.preventDefault ? event.preventDefault() : (event.returnValue = false));
