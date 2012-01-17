@@ -1,13 +1,13 @@
 /*
- * Copyright (C) 2005-2011 Diego Perini
+ * Copyright (C) 2005-2012 Diego Perini
  * All rights reserved.
  *
  * nwevents.js - Javascript Event Manager
  *
  * Author: Diego Perini <diego.perini at gmail com>
- * Version: 1.2.4beta
+ * Version: 1.2.4
  * Created: 20051016
- * Release: 20111010
+ * Release: 20120101
  *
  * License:
  *  http://javascript.nwbox.com/NWEvents/MIT-LICENSE
@@ -17,7 +17,7 @@
 
 (function(global) {
 
-  var version = 'nwevents-1.2.4beta',
+  var version = 'nwevents-1.2.4',
 
   Event = typeof exports === 'object' ? exports : (
     (global.NW || (global.NW = { })) &&

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 Diego Perini
+ * Copyright (C) 2005-2012 Diego Perini
  * All rights reserved.
  *
  * PubSub extension for NWEvents

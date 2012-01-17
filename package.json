@@ -1,6 +1,6 @@
 {
   "name": "nwevents",
-  "version": "1.2.4beta",
+  "version": "1.2.4",
   "description": "Javascript Event Manager",
   "homepage": "http://javascript.nwbox.com/NWEvents/",
   "main": "./src/nwevents",
