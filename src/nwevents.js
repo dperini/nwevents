@@ -841,12 +841,13 @@
         result = true,
         node = element, ancestors = [],
         event = synthesize(element, type, capture);
-      // collect ancestors
+      // collect all the ancestor elements
       while (node) {
         ancestors.push(node);
         node = node.parentNode;
       }
-      // capturing, reverse ancestors collection
+      // capturing, reverse ancestors collection,
+      // and remove target element from collection 
       if (capture) ancestors.reverse().pop();
       // execute registered handlers in fifo order
       for (i = 0, l = ancestors.length; l > i; ++i) {
