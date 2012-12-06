@@ -5,7 +5,7 @@
  * nwevents.js - Javascript Event Manager
  *
  * Author: Diego Perini <diego.perini at gmail com>
- * Version: 1.2.4
+ * Version: 1.2.5beta
  * Created: 20051016
  * Release: 20120101
  *
@@ -17,7 +17,7 @@
 
 (function(global) {
 
-  var version = 'nwevents-1.2.4',
+  var version = 'nwevents-1.2.5beta',
 
   Event = typeof exports === 'object' ? exports : (
     (global.NW || (global.NW = { })) &&
@@ -332,7 +332,7 @@
   processListeners =
     function(event) {
       var i, l, items, calls, parms, phase, valid,
-      done = false, result = true, type = event.type;
+      result = true, type = event.type;
 
       if (Listeners[type] && Listeners[type].items) {
 
@@ -344,9 +344,8 @@
         }
 
         // only AT_TARGET event.target === event.currentTarget
-        if (phase !== AT_TARGET && event.target === this) {
-          if (event.propagated && phase === CAPTURING_PHASE) return true;
-          phase = event.eventPhase = AT_TARGET;
+        if (event.target === this) {
+          event.eventPhase = AT_TARGET;
         }
 
         // make a copy of the Listeners[type] array
@@ -372,9 +371,7 @@
                 }
                 break;
               case AT_TARGET:
-                if (!done && (done = true)) {
-                  valid = true;
-                }
+                valid = true;
                 break;
               // Safari 4.x load events
               // may have eventPhase === 0
@@ -850,7 +847,7 @@
         node = node.parentNode;
       }
       // capturing, reverse ancestors collection
-      if (capture) ancestors.reverse();
+      if (capture) ancestors.reverse().pop();
       // execute registered handlers in fifo order
       for (i = 0, l = ancestors.length; l > i; ++i) {
         // set currentTarget to current ancestor
