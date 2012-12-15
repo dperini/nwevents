@@ -343,8 +343,8 @@
           return true;
         }
 
-        // only AT_TARGET event.target === event.currentTarget
-        if (event.target === this) {
+        // only AT_TARGET event.target must equal this
+        if (phase !== AT_TARGET && event.target === this) {
           event.eventPhase = AT_TARGET;
         }
 
@@ -847,7 +847,7 @@
         node = node.parentNode;
       }
       // capturing, reverse ancestors collection,
-      // and remove target element from collection 
+      // and remove target element from collection
       if (capture) ancestors.reverse().pop();
       // execute registered handlers in fifo order
       for (i = 0, l = ancestors.length; l > i; ++i) {
@@ -856,7 +856,7 @@
         // set eventPhase to the requested phase
         event.eventPhase = capture ? CAPTURING_PHASE : BUBBLING_PHASE;
         // execute listeners bound to this ancestor and set return value
-        if (processListeners.call(ancestors[i], event) === false || event.returnValue === false) {
+        if (processListeners.call(ancestors[i], event) === false) {
           result = false;
           break;
         }
@@ -894,7 +894,7 @@
       // html form elements only
       if (type) {
         // keydown or mousedown on form elements
-        if (FormTextbox.test(type) && event.keyCode === 13 && target.form) {
+        if (FormTextbox.test(type) && (event.which || event.keyCode) === 13 && target.form) {
           target = target.form;
           type = 'submit';
         } else if (FormButton.test(type) && target.form) {
