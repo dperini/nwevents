@@ -3,11 +3,7 @@ var debug = true,
   // aliases to DOM elements Event API
   add = NW.Event.listen,
   rem = NW.Event.unlisten,
-  dis = NW.Event.dispatch;
-
-  zone = document.getElementById('testzone');
-
-  tests = [];
+  dis = NW.Event.dispatch,
 
   next = function() {
     var fn = tests.shift();
@@ -18,7 +14,11 @@ var debug = true,
       zone.style.borderColor = '#999';
       zone.innerHTML = 'DONE!';
     }
-  };
+  },
+
+  zone = document.getElementById('testzone'),
+
+  tests = [];
 
 module('INTERACTION');
 
