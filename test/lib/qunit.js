@@ -739,6 +739,7 @@ QUnit.equiv = function () {
                 return callbacks[prop]; // or undefined
             }
         }
+        return undefined;
     }
     
     var callbacks = function () {
