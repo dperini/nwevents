@@ -156,7 +156,7 @@
   SUPPORT_KEYBOARD_EVENTS = hasInterface('KeyboardEvent'),
 
   // non standard Firefox KeyEvent
-  SUPPORT_KEY_EVENTS = 'KeyEvent' in global &&
+  SUPPORT_KEY_EVENTS = 'KeyEvent' in global && KeyEvent.prototype &&
     typeof KeyEvent.prototype.initEvent === 'function',
 
   KEYBOARD_FIX = SUPPORT_KEYBOARD_EVENTS ? '' : 's',
