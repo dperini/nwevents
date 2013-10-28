@@ -594,7 +594,7 @@
     // it is a required parameter with iframes
     function(selector, type, handler, element) {
       var i, j, k, l, types;
-      if (typeof selector === 'string') {
+      if (typeof selector == 'string' && typeof type == 'string') {
         types = type.split(' ');
         element = element || context;
         for (i = 0, l = types.length; l > i; ++i) {
@@ -609,7 +609,7 @@
       } else {
         // hash of "rules" containing selector-event-handler
         for (i in selector) {
-          if (typeof i === 'string') {
+          if (typeof i == 'string') {
             for (j in selector[i]) {
               delegate(i, j, selector[i][j], element);
             }
@@ -625,7 +625,7 @@
     // it is a required parameter with iframes
     function(selector, type, handler, element) {
       var i, j, k, l, types;
-      if (typeof type === 'string') {
+      if (typeof selector == 'string' && typeof type == 'string') {
         types = type.split(' ');
         element = element || context;
         for (i = 0, l = types.length; l > i; ++i) {
@@ -640,7 +640,7 @@
       } else {
         // hash of "rules" containing selector-event-handler
         for (i in selector) {
-          if (typeof i === 'string') {
+          if (typeof i == 'string') {
             for (j in selector[i]) {
               undelegate(i, j, selector[i][j], element);
             }
