@@ -51,6 +51,8 @@ NW.Event.appendListener(window, 'load', function() {
 	NW.Event.dispatch(li[li.length-1],'mouseover',true);                                                
 }, false);
 
+NW.Event.appendDelegate(rulesets);
+
 // test adding some click on td and li
 function test(e) {
 	alert(e.target.nodeName +' Clicked');
